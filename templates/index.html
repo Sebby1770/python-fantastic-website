@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta
+      name="description"
+      content="Asteria Studio is a polished Python-powered website built with Flask, responsive design, and local visual assets."
+    >
+    <title>Asteria Studio</title>
+    <link rel="icon" href="{{ url_for('static', filename='img/favicon.svg') }}" type="image/svg+xml">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="#top" aria-label="Asteria Studio home">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span>Asteria Studio</span>
+      </a>
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav">
+        <span class="sr-only">Open navigation</span>
+        <span aria-hidden="true"></span>
+        <span aria-hidden="true"></span>
+        <span aria-hidden="true"></span>
+      </button>
+      <nav class="site-nav" id="site-nav" aria-label="Primary navigation">
+        <a href="#work">Work</a>
+        <a href="#services">Services</a>
+        <a href="#process">Process</a>
+        <a class="nav-action" href="#contact">Start</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero" aria-label="Asteria Studio introduction">
+        <div class="hero-content">
+          <p class="eyebrow">Python powered digital studio</p>
+          <h1>Asteria Studio</h1>
+          <p class="hero-copy">
+            Premium websites with editorial polish, sharp responsive design, and a clean Flask foundation
+            ready for real product work.
+          </p>
+          <div class="hero-actions" aria-label="Primary actions">
+            <a class="button button-primary" href="#contact">Start a project</a>
+            <a class="button button-secondary" href="#work">View work</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="signal-strip" aria-label="Studio highlights">
+        {% for stat in stats %}
+          <div class="signal">
+            <strong>{{ stat.value }}</strong>
+            <span>{{ stat.label }}</span>
+          </div>
+        {% endfor %}
+      </section>
+
+      <section class="section section-intro" id="work">
+        <div class="section-heading">
+          <p class="eyebrow">Selected work</p>
+          <h2>Web experiences with a point of view.</h2>
+        </div>
+        <div class="work-grid">
+          {% for item in work %}
+            <article class="work-card">
+              <img src="{{ url_for('static', filename=item.image) }}" alt="{{ item.name }} visual study">
+              <div class="work-card-body">
+                <p>{{ item.category }}</p>
+                <h3>{{ item.name }}</h3>
+                <span>{{ item.summary }}</span>
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+      </section>
+
+      <section class="section services-band" id="services">
+        <div class="section-heading">
+          <p class="eyebrow">Services</p>
+          <h2>Designed beautifully, built sensibly.</h2>
+        </div>
+        <div class="service-list">
+          {% for service in services %}
+            <article class="service-row">
+              <h3>{{ service.title }}</h3>
+              <p>{{ service.summary }}</p>
+            </article>
+          {% endfor %}
+        </div>
+      </section>
+
+      <section class="section process-section" id="process">
+        <div class="section-heading">
+          <p class="eyebrow">Process</p>
+          <h2>From blank page to launch-ready repo.</h2>
+        </div>
+        <div class="process-list">
+          {% for step in process %}
+            <article class="process-step">
+              <span>{{ step.label }}</span>
+              <h3>{{ step.title }}</h3>
+              <p>{{ step.summary }}</p>
+            </article>
+          {% endfor %}
+        </div>
+      </section>
+
+      <section class="section contact-section" id="contact">
+        <div class="contact-copy">
+          <p class="eyebrow">Start the conversation</p>
+          <h2>Bring the next website into focus.</h2>
+          <p>
+            Share a few lines about the project and the Python endpoint will return a fast confirmation.
+          </p>
+        </div>
+        <form class="contact-form" data-contact-form>
+          <label>
+            Name
+            <input name="name" type="text" autocomplete="name" required>
+          </label>
+          <label>
+            Email
+            <input name="email" type="email" autocomplete="email" required>
+          </label>
+          <label>
+            Project note
+            <textarea name="message" rows="5" required></textarea>
+          </label>
+          <button class="button button-primary" type="submit">Send brief</button>
+          <p class="form-status" data-form-status role="status" aria-live="polite"></p>
+        </form>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <span>Asteria Studio</span>
+      <a href="#top">Back to top</a>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}" defer></script>
+  </body>
+</html>
