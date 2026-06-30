@@ -370,6 +370,50 @@ h3 {
   gap: 1rem;
 }
 
+.ops-section {
+  padding-top: 5.6rem;
+}
+
+.ops-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.ops-card {
+  min-height: 17rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 1.2rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.72)),
+    linear-gradient(135deg, rgba(54, 103, 177, 0.2), rgba(23, 124, 117, 0.16));
+}
+
+.ops-card p {
+  color: var(--ink-soft);
+}
+
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 1rem;
+}
+
+.tag-list span {
+  border: 1px solid rgba(16, 20, 24, 0.16);
+  border-radius: 999px;
+  padding: 0.35rem 0.55rem;
+  color: var(--ink-soft);
+  background: rgba(255, 255, 255, 0.62);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
 .process-step {
   min-height: 18rem;
   display: flex;
@@ -397,6 +441,49 @@ h3 {
 
 .process-step p {
   margin-bottom: 0;
+  color: var(--ink-soft);
+}
+
+.changelog-section {
+  border-top: 1px solid var(--line);
+}
+
+.changelog-list {
+  display: grid;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--line);
+}
+
+.change-entry {
+  display: grid;
+  grid-template-columns: minmax(10rem, 0.35fr) minmax(18rem, 1fr);
+  gap: 2rem;
+  padding: 1.25rem;
+  background: var(--white);
+}
+
+.change-entry + .change-entry {
+  border-top: 1px solid var(--line);
+}
+
+.change-entry span {
+  display: block;
+  margin-bottom: 0.4rem;
+  color: var(--teal);
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.change-entry h3,
+.change-entry p {
+  margin-bottom: 0.7rem;
+}
+
+.change-entry ul {
+  margin: 0;
+  padding-left: 1.1rem;
   color: var(--ink-soft);
 }
 
@@ -473,6 +560,12 @@ h3 {
   font-weight: 800;
 }
 
+.site-footer div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
 .site-footer a {
   color: var(--white);
 }
@@ -527,7 +620,12 @@ h3 {
   }
 
   .work-grid,
-  .process-list {
+  .process-list,
+  .ops-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .change-entry {
     grid-template-columns: 1fr;
   }
 }
@@ -574,6 +672,10 @@ h3 {
     flex-direction: column;
     padding-right: 1rem;
     padding-left: 1rem;
+  }
+
+  .ops-grid {
+    grid-template-columns: 1fr;
   }
 }
 

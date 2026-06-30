@@ -21,7 +21,45 @@ def test_health_endpoint():
         response = client.get("/health")
 
     assert response.status_code == 200
-    assert response.get_json() == {"ok": True, "service": "asteria-studio"}
+    assert response.get_json()["ok"] is True
+    assert response.get_json()["service"] == "asteria-studio"
+    assert "version" in response.get_json()
+
+
+def test_ready_endpoint_reports_checks():
+    app = create_app()
+
+    with app.test_client() as client:
+        response = client.get("/ready")
+
+    payload = response.get_json()
+    assert response.status_code == 200
+    assert payload["ok"] is True
+    assert payload["checks"]["security_headers"] is True
+
+
+def test_public_routes_include_security_headers():
+    app = create_app()
+
+    with app.test_client() as client:
+        response = client.get("/")
+
+    assert response.headers["X-Content-Type-Options"] == "nosniff"
+    assert response.headers["X-Frame-Options"] == "DENY"
+    assert "default-src 'self'" in response.headers["Content-Security-Policy"]
+
+
+def test_robots_and_sitemap_render():
+    app = create_app()
+
+    with app.test_client() as client:
+        robots = client.get("/robots.txt")
+        sitemap = client.get("/sitemap.xml")
+
+    assert robots.status_code == 200
+    assert "Sitemap:" in robots.get_data(as_text=True)
+    assert sitemap.status_code == 200
+    assert "<urlset" in sitemap.get_data(as_text=True)
 
 
 def test_contact_requires_fields():
@@ -50,3 +88,19 @@ def test_contact_accepts_valid_payload():
     assert response.status_code == 200
     assert response.get_json()["ok"] is True
     assert "Ada" in response.get_json()["message"]
+
+
+def test_contact_rate_limits_bursts():
+    app = create_app({"CONTACT_RATE_LIMIT": 1, "CONTACT_RATE_WINDOW": 60})
+    payload = {
+        "name": "Ada Lovelace",
+        "email": "ada@example.com",
+        "message": "I need a launch site for a Python product.",
+    }
+
+    with app.test_client() as client:
+        first = client.post("/contact", json=payload, environ_base={"REMOTE_ADDR": "203.0.113.10"})
+        second = client.post("/contact", json=payload, environ_base={"REMOTE_ADDR": "203.0.113.10"})
+
+    assert first.status_code == 200
+    assert second.status_code == 429

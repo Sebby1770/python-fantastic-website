@@ -26,7 +26,9 @@
       <nav class="site-nav" id="site-nav" aria-label="Primary navigation">
         <a href="#work">Work</a>
         <a href="#services">Services</a>
+        <a href="#ops">Ops</a>
         <a href="#process">Process</a>
+        <a href="#changelog">Changes</a>
         <a class="nav-action" href="#contact">Start</a>
       </nav>
     </header>
@@ -37,8 +39,8 @@
           <p class="eyebrow">Python powered digital studio</p>
           <h1>Asteria Studio</h1>
           <p class="hero-copy">
-            Premium websites with editorial polish, sharp responsive design, and a clean Flask foundation
-            ready for real product work.
+            Premium websites with editorial polish, sharp responsive design, and a Flask foundation
+            hardened for staging, CI/CD, cloud deploys, and real product work.
           </p>
           <div class="hero-actions" aria-label="Primary actions">
             <a class="button button-primary" href="#contact">Start a project</a>
@@ -90,6 +92,26 @@
         </div>
       </section>
 
+      <section class="section ops-section" id="ops">
+        <div class="section-heading">
+          <p class="eyebrow">Launch ops</p>
+          <h2>Production habits without the enterprise theatre.</h2>
+        </div>
+        <div class="ops-grid">
+          {% for signal in stack_signals %}
+            <article class="ops-card">
+              <h3>{{ signal.title }}</h3>
+              <p>{{ signal.summary }}</p>
+              <div class="tag-list" aria-label="{{ signal.title }} capabilities">
+                {% for tag in signal.tags %}
+                  <span>{{ tag }}</span>
+                {% endfor %}
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+      </section>
+
       <section class="section process-section" id="process">
         <div class="section-heading">
           <p class="eyebrow">Process</p>
@@ -106,12 +128,38 @@
         </div>
       </section>
 
+      <section class="section changelog-section" id="changelog">
+        <div class="section-heading">
+          <p class="eyebrow">Changelog</p>
+          <h2>Every upgrade leaves a trail.</h2>
+        </div>
+        <div class="changelog-list">
+          {% for entry in changelog %}
+            <article class="change-entry">
+              <div>
+                <span>{{ entry.date }}</span>
+                <h3>{{ entry.version }}</h3>
+              </div>
+              <div>
+                <p>{{ entry.summary }}</p>
+                <ul>
+                  {% for item in entry.items %}
+                    <li>{{ item }}</li>
+                  {% endfor %}
+                </ul>
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+      </section>
+
       <section class="section contact-section" id="contact">
         <div class="contact-copy">
           <p class="eyebrow">Start the conversation</p>
           <h2>Bring the next website into focus.</h2>
           <p>
-            Share a few lines about the project and the Python endpoint will return a fast confirmation.
+            Share a few lines about the project. The endpoint validates payloads, throttles bursts,
+            and returns a fast confirmation.
           </p>
         </div>
         <form class="contact-form" data-contact-form>
@@ -134,8 +182,12 @@
     </main>
 
     <footer class="site-footer">
-      <span>Asteria Studio</span>
-      <a href="#top">Back to top</a>
+      <span>Asteria Studio v{{ app_version }}</span>
+      <div>
+        <a href="/ready">Status</a>
+        <a href="#changelog">Changelog</a>
+        <a href="#top">Back to top</a>
+      </div>
     </footer>
 
     <script src="{{ url_for('static', filename='js/main.js') }}" defer></script>
