@@ -1,0 +1,20 @@
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      CONTACT_DB_PATH: /data/contacts.sqlite3
+      CONTACT_RATE_LIMIT: "5"
+      CONTACT_RATE_WINDOW: "60"
+      TRUST_PROXY_HEADERS: "true"
+    volumes:
+      - contact-data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/ready').read()"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  contact-data:

@@ -1,21 +1,28 @@
 from __future__ import annotations
 
 import os
+import secrets
+import sqlite3
 import time
 from collections import defaultdict, deque
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from email.utils import parseaddr
+from hashlib import sha256
+from pathlib import Path
 from typing import Deque
 
-from flask import Flask, Response, jsonify, render_template, request, url_for
+from flask import Flask, Response, g, jsonify, render_template, request, url_for
+from werkzeug.exceptions import HTTPException
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 
-APP_VERSION = "2.0.0"
+APP_VERSION = "2.1.0"
 STARTED_AT = datetime.now(timezone.utc)
 CONTACT_LIMIT_DEFAULT = 5
 CONTACT_WINDOW_DEFAULT = 60
 MAX_CONTACT_BYTES = 4096
+REQUEST_WINDOW_SECONDS = 60
 
 
 @dataclass(frozen=True)
@@ -145,6 +152,16 @@ STACK_SIGNALS = [
 
 CHANGELOG = [
     ChangelogEntry(
+        "2.1.0",
+        "2026-06-30",
+        "Added observability, embedded storage, and staging manifests.",
+        (
+            "Added request IDs, response timing, JSON metrics, and QPS tracking.",
+            "Added an embedded SQLite contact ledger with privacy-preserving hashes.",
+            "Added Docker Compose, Kubernetes manifests, load-balancer/proxy support, and cloud notes.",
+        ),
+    ),
+    ChangelogEntry(
         "2.0.0",
         "2026-06-30",
         "Launch-readiness refresh inspired by production infrastructure fundamentals.",
@@ -166,6 +183,18 @@ CHANGELOG = [
 ]
 
 _rate_limits: dict[str, Deque[float]] = defaultdict(deque)
+_request_times: Deque[float] = deque()
+_metrics = {
+    "requests": 0,
+    "errors": 0,
+    "contact_submissions": 0,
+    "contact_rate_limited": 0,
+    "latency_ms_total": 0.0,
+}
+
+
+def _truthy(value: str | None) -> bool:
+    return str(value or "").lower() in {"1", "true", "yes", "on"}
 
 
 def _contact_limited(client_key: str, limit: int, window_seconds: int) -> bool:
@@ -184,20 +213,109 @@ def _client_key() -> str:
     return forwarded_for or request.remote_addr or "local"
 
 
+def _hash_value(value: str, salt: str) -> str:
+    return sha256(f"{salt}:{value}".encode("utf-8")).hexdigest()
+
+
+def _contact_store_path(app: Flask) -> Path:
+    configured = Path(str(app.config["CONTACT_DB_PATH"]))
+    if configured.is_absolute():
+        return configured
+    return Path(app.instance_path) / configured
+
+
+def init_contact_store(app: Flask) -> None:
+    db_path = _contact_store_path(app)
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    with sqlite3.connect(db_path) as connection:
+        connection.execute("PRAGMA journal_mode=WAL")
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS contact_submissions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                created_at TEXT NOT NULL,
+                name TEXT NOT NULL,
+                email_hash TEXT NOT NULL,
+                client_hash TEXT NOT NULL,
+                message_preview TEXT NOT NULL,
+                request_id TEXT NOT NULL
+            )
+            """
+        )
+        connection.execute(
+            "CREATE INDEX IF NOT EXISTS idx_contact_submissions_created_at "
+            "ON contact_submissions(created_at)"
+        )
+
+
+def store_contact(app: Flask, name: str, email: str, message: str, client_key: str) -> None:
+    salt = str(app.config["CONTACT_HASH_SALT"])
+    with sqlite3.connect(_contact_store_path(app)) as connection:
+        connection.execute(
+            """
+            INSERT INTO contact_submissions
+                (created_at, name, email_hash, client_hash, message_preview, request_id)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                name,
+                _hash_value(email.lower(), salt),
+                _hash_value(client_key, salt),
+                message[:160],
+                getattr(g, "request_id", "unknown"),
+            ),
+        )
+
+
+def contact_count(app: Flask) -> int:
+    with sqlite3.connect(_contact_store_path(app)) as connection:
+        row = connection.execute("SELECT COUNT(*) FROM contact_submissions").fetchone()
+    return int(row[0])
+
+
+def current_qps() -> float:
+    now = time.monotonic()
+    while _request_times and now - _request_times[0] > REQUEST_WINDOW_SECONDS:
+        _request_times.popleft()
+    return round(len(_request_times) / REQUEST_WINDOW_SECONDS, 3)
+
+
 def create_app(config: dict | None = None) -> Flask:
     app = Flask(__name__)
     app.config.update(
         CONTACT_RATE_LIMIT=int(os.getenv("CONTACT_RATE_LIMIT", CONTACT_LIMIT_DEFAULT)),
         CONTACT_RATE_WINDOW=int(os.getenv("CONTACT_RATE_WINDOW", CONTACT_WINDOW_DEFAULT)),
         CONTACT_MAX_MESSAGE_LENGTH=int(os.getenv("CONTACT_MAX_MESSAGE_LENGTH", 1200)),
+        CONTACT_DB_PATH=os.getenv("CONTACT_DB_PATH", "contacts.sqlite3"),
+        CONTACT_HASH_SALT=os.getenv("CONTACT_HASH_SALT", "local-dev-salt"),
+        TRUST_PROXY_HEADERS=_truthy(os.getenv("TRUST_PROXY_HEADERS")),
         SITE_NAME="Asteria Studio",
         APP_VERSION=APP_VERSION,
     )
     if config:
         app.config.update(config)
 
+    if app.config["TRUST_PROXY_HEADERS"]:
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
+
+    init_contact_store(app)
+
+    @app.before_request
+    def start_observation() -> None:
+        g.request_started_at = time.perf_counter()
+        g.request_id = request.headers.get("X-Request-ID") or secrets.token_hex(8)
+        _request_times.append(time.monotonic())
+
     @app.after_request
     def add_security_headers(response: Response) -> Response:
+        elapsed_ms = (time.perf_counter() - getattr(g, "request_started_at", time.perf_counter())) * 1000
+        _metrics["requests"] += 1
+        _metrics["latency_ms_total"] += elapsed_ms
+        if response.status_code >= 500:
+            _metrics["errors"] += 1
+        response.headers.setdefault("X-Request-ID", getattr(g, "request_id", "unknown"))
+        response.headers.setdefault("X-Response-Time-Ms", f"{elapsed_ms:.2f}")
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
         response.headers.setdefault("X-Frame-Options", "DENY")
         response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
@@ -212,6 +330,25 @@ def create_app(config: dict | None = None) -> Flask:
         else:
             response.headers.setdefault("Cache-Control", "public, max-age=300")
         return response
+
+    @app.errorhandler(Exception)
+    def handle_unexpected_error(error: Exception):
+        if isinstance(error, HTTPException):
+            return error
+        app.logger.exception(
+            "Unhandled request error",
+            extra={"request_id": getattr(g, "request_id", "unknown"), "path": request.path},
+        )
+        return (
+            jsonify(
+                {
+                    "ok": False,
+                    "message": "The service hit an unexpected error.",
+                    "request_id": getattr(g, "request_id", "unknown"),
+                }
+            ),
+            500,
+        )
 
     @app.context_processor
     def inject_site_metadata():
@@ -245,8 +382,26 @@ def create_app(config: dict | None = None) -> Flask:
                 "checks": {
                     "template": True,
                     "contact_rate_limit": True,
+                    "contact_store": contact_count(app) >= 0,
                     "security_headers": True,
                 },
+            }
+        )
+
+    @app.get("/metrics")
+    def metrics():
+        requests = max(1, int(_metrics["requests"]))
+        return jsonify(
+            {
+                "service": "asteria-studio",
+                "version": APP_VERSION,
+                "requests": int(_metrics["requests"]),
+                "errors": int(_metrics["errors"]),
+                "contact_submissions": int(_metrics["contact_submissions"]),
+                "contact_rate_limited": int(_metrics["contact_rate_limited"]),
+                "qps_60s": current_qps(),
+                "avg_latency_ms": round(float(_metrics["latency_ms_total"]) / requests, 2),
+                "stored_contact_count": contact_count(app),
             }
         )
 
@@ -277,11 +432,13 @@ def create_app(config: dict | None = None) -> Flask:
         if request.content_length and request.content_length > MAX_CONTACT_BYTES:
             return jsonify({"ok": False, "message": "Please keep the brief under 4KB."}), 413
 
+        client_key = _client_key()
         if _contact_limited(
-            _client_key(),
+            client_key,
             int(app.config["CONTACT_RATE_LIMIT"]),
             int(app.config["CONTACT_RATE_WINDOW"]),
         ):
+            _metrics["contact_rate_limited"] += 1
             return (
                 jsonify(
                     {
@@ -317,6 +474,9 @@ def create_app(config: dict | None = None) -> Flask:
         if "@" not in parsed_email or "." not in parsed_email.rsplit("@", 1)[-1]:
             return jsonify({"ok": False, "message": "Please enter a valid email address."}), 400
 
+        store_contact(app, name, parsed_email, message, client_key)
+        _metrics["contact_submissions"] += 1
+
         first_name = name.split()[0]
         return jsonify(
             {
@@ -329,4 +489,4 @@ def create_app(config: dict | None = None) -> Flask:
 
 
 if __name__ == "__main__":
-    create_app().run(debug=True)
+    create_app().run(debug=_truthy(os.getenv("FLASK_DEBUG")))

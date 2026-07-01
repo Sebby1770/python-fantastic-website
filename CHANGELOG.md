@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.1.0 - 2026-06-30
+
+- Added request IDs, response timing headers, JSON metrics, and rolling 60-second QPS reporting.
+- Added an embedded SQLite contact ledger with WAL mode, indexed timestamps, and hashed email/client identifiers.
+- Added trusted proxy/load-balancer support through `ProxyFix`.
+- Added Docker Compose, Kubernetes deployment/service manifests, and cloud/serverless staging notes.
+- Expanded tests around metrics and privacy-preserving contact persistence.
+
 ## 2.0.0 - 2026-06-30
 
 - Added production-style security headers, cache controls, payload caps, and contact rate limiting.

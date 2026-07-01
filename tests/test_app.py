@@ -1,3 +1,5 @@
+import sqlite3
+
 from app import create_app
 
 
@@ -36,6 +38,7 @@ def test_ready_endpoint_reports_checks():
     assert response.status_code == 200
     assert payload["ok"] is True
     assert payload["checks"]["security_headers"] is True
+    assert payload["checks"]["contact_store"] is True
 
 
 def test_public_routes_include_security_headers():
@@ -73,7 +76,7 @@ def test_contact_requires_fields():
 
 
 def test_contact_accepts_valid_payload():
-    app = create_app()
+    app = create_app({"CONTACT_RATE_LIMIT": 20})
 
     with app.test_client() as client:
         response = client.post(
@@ -88,6 +91,53 @@ def test_contact_accepts_valid_payload():
     assert response.status_code == 200
     assert response.get_json()["ok"] is True
     assert "Ada" in response.get_json()["message"]
+
+
+def test_contact_submission_is_stored_privately(tmp_path):
+    db_path = tmp_path / "contacts.sqlite3"
+    app = create_app({"CONTACT_DB_PATH": str(db_path), "CONTACT_RATE_LIMIT": 20})
+
+    with app.test_client() as client:
+        response = client.post(
+            "/contact",
+            json={
+                "name": "Grace Hopper",
+                "email": "grace@example.com",
+                "message": "I need a production launch system.",
+            },
+        )
+
+    assert response.status_code == 200
+    with sqlite3.connect(db_path) as connection:
+        row = connection.execute(
+            "SELECT name, email_hash, message_preview FROM contact_submissions"
+        ).fetchone()
+
+    assert row[0] == "Grace Hopper"
+    assert row[1] != "grace@example.com"
+    assert "production launch" in row[2]
+
+
+def test_metrics_endpoint_reports_qps_and_contacts(tmp_path):
+    app = create_app({"CONTACT_DB_PATH": str(tmp_path / "contacts.sqlite3"), "CONTACT_RATE_LIMIT": 20})
+
+    with app.test_client() as client:
+        client.get("/")
+        client.post(
+            "/contact",
+            json={
+                "name": "Ada Lovelace",
+                "email": "ada@example.com",
+                "message": "I need a launch site for a Python product.",
+            },
+        )
+        response = client.get("/metrics")
+
+    payload = response.get_json()
+    assert response.status_code == 200
+    assert payload["requests"] >= 2
+    assert payload["qps_60s"] > 0
+    assert payload["stored_contact_count"] == 1
 
 
 def test_contact_rate_limits_bursts():
