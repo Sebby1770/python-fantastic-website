@@ -184,6 +184,36 @@ def test_admin_contacts_return_privacy_preserving_summaries(tmp_path):
     assert "grace@example.com" not in str(payload)
 
 
+def test_admin_export_returns_privacy_preserving_snapshot(tmp_path):
+    app = create_app(
+        {
+            "CONTACT_DB_PATH": str(tmp_path / "contacts.sqlite3"),
+            "CONTACT_RATE_LIMIT": 20,
+            "ADMIN_TOKEN": "admin-secret",
+        }
+    )
+
+    with app.test_client() as client:
+        client.post(
+            "/contact",
+            json={
+                "name": "Grace Hopper",
+                "email": "grace@example.com",
+                "message": "I need a production launch system.",
+            },
+        )
+        denied = client.get("/admin/export.json")
+        allowed = client.get("/admin/export.json", headers={"Authorization": "Bearer admin-secret"})
+
+    payload = allowed.get_json()
+    assert denied.status_code == 401
+    assert allowed.status_code == 200
+    assert "attachment;" in allowed.headers["Content-Disposition"]
+    assert payload["metrics"]["stored_contact_count"] == 1
+    assert payload["contacts"][0]["email_hash_prefix"]
+    assert "grace@example.com" not in str(payload)
+
+
 def test_api_discovery_routes_render():
     app = create_app()
 
@@ -196,9 +226,29 @@ def test_api_discovery_routes_render():
     assert status.status_code == 200
     assert status.get_json()["version"]
     assert "vercel" in status.get_json()["features"]
-    assert changelog.get_json()["entries"][0]["version"] == "2.3.0"
+    assert changelog.get_json()["entries"][0]["version"] == "2.4.0"
     assert integrations.get_json()["vercel"]["configured"] is True
     assert openapi.get_json()["openapi"] == "3.1.0"
+
+
+def test_contact_honeypot_soft_accepts_without_storing(tmp_path):
+    app = create_app({"CONTACT_DB_PATH": str(tmp_path / "contacts.sqlite3"), "CONTACT_RATE_LIMIT": 20})
+
+    with app.test_client() as client:
+        response = client.post(
+            "/contact",
+            json={
+                "name": "Spam Bot",
+                "email": "bot@example.com",
+                "message": "Please buy this.",
+                "website": "https://spam.example",
+            },
+        )
+        metrics = client.get("/metrics").get_json()
+
+    assert response.status_code == 200
+    assert contact_count_from_db(tmp_path / "contacts.sqlite3") == 0
+    assert metrics["contact_spam_blocked"] >= 1
 
 
 def test_contact_can_sync_privacy_payload_to_supabase(tmp_path, monkeypatch):
@@ -264,3 +314,10 @@ def test_contact_rate_limits_bursts():
 
     assert first.status_code == 200
     assert second.status_code == 429
+    assert second.headers["Retry-After"] == "60"
+
+
+def contact_count_from_db(db_path):
+    with sqlite3.connect(db_path) as connection:
+        row = connection.execute("SELECT COUNT(*) FROM contact_submissions").fetchone()
+    return int(row[0])

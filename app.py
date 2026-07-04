@@ -20,7 +20,7 @@ from werkzeug.exceptions import HTTPException
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 
-APP_VERSION = "2.3.0"
+APP_VERSION = "2.4.0"
 STARTED_AT = datetime.now(timezone.utc)
 CONTACT_LIMIT_DEFAULT = 5
 CONTACT_WINDOW_DEFAULT = 60
@@ -155,6 +155,16 @@ STACK_SIGNALS = [
 
 CHANGELOG = [
     ChangelogEntry(
+        "2.4.0",
+        "2026-07-04",
+        "Added safer contact intake and privacy-preserving ops exports.",
+        (
+            "Added configurable honeypot handling for bot contact submissions.",
+            "Added Retry-After headers for rate-limited contact requests.",
+            "Added token-protected JSON exports for contacts, metrics, and integration state.",
+        ),
+    ),
+    ChangelogEntry(
         "2.3.0",
         "2026-07-04",
         "Added Vercel deployment readiness and optional Supabase contact sync.",
@@ -212,6 +222,7 @@ _metrics = {
     "errors": 0,
     "contact_submissions": 0,
     "contact_rate_limited": 0,
+    "contact_spam_blocked": 0,
     "supabase_contact_syncs": 0,
     "supabase_contact_sync_errors": 0,
     "latency_ms_total": 0.0,
@@ -415,6 +426,34 @@ def recent_contacts(app: Flask, limit: int) -> list[dict]:
     ]
 
 
+def export_snapshot(app: Flask) -> dict:
+    requests = max(1, int(_metrics["requests"]))
+    return {
+        "ok": True,
+        "service": "asteria-studio",
+        "version": APP_VERSION,
+        "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "contacts": recent_contacts(app, 100),
+        "metrics": {
+            "requests": int(_metrics["requests"]),
+            "errors": int(_metrics["errors"]),
+            "contact_submissions": int(_metrics["contact_submissions"]),
+            "contact_rate_limited": int(_metrics["contact_rate_limited"]),
+            "contact_spam_blocked": int(_metrics["contact_spam_blocked"]),
+            "supabase_contact_syncs": int(_metrics["supabase_contact_syncs"]),
+            "supabase_contact_sync_errors": int(_metrics["supabase_contact_sync_errors"]),
+            "qps_60s": current_qps(),
+            "avg_latency_ms": round(float(_metrics["latency_ms_total"]) / requests, 2),
+            "stored_contact_count": contact_count(app),
+        },
+        "integrations": {
+            "supabase_contact_sync_enabled": supabase_enabled(app),
+            "supabase_contact_table": str(app.config["SUPABASE_CONTACT_TABLE"]),
+            "vercel_ready": True,
+        },
+    }
+
+
 def current_qps() -> float:
     now = time.monotonic()
     while _request_times and now - _request_times[0] > REQUEST_WINDOW_SECONDS:
@@ -434,6 +473,7 @@ def create_app(config: dict | None = None) -> Flask:
         ),
         CONTACT_HASH_SALT=os.getenv("CONTACT_HASH_SALT", "local-dev-salt"),
         CONTACT_RETENTION_DAYS=int(os.getenv("CONTACT_RETENTION_DAYS", "90")),
+        CONTACT_HONEYPOT_FIELD=os.getenv("CONTACT_HONEYPOT_FIELD", "website"),
         METRICS_TOKEN=os.getenv("METRICS_TOKEN", ""),
         ADMIN_TOKEN=os.getenv("ADMIN_TOKEN", ""),
         SUPABASE_URL=os.getenv("SUPABASE_URL", ""),
@@ -608,6 +648,7 @@ def create_app(config: dict | None = None) -> Flask:
                 "errors": int(_metrics["errors"]),
                 "contact_submissions": int(_metrics["contact_submissions"]),
                 "contact_rate_limited": int(_metrics["contact_rate_limited"]),
+                "contact_spam_blocked": int(_metrics["contact_spam_blocked"]),
                 "supabase_contact_syncs": int(_metrics["supabase_contact_syncs"]),
                 "supabase_contact_sync_errors": int(_metrics["supabase_contact_sync_errors"]),
                 "qps_60s": current_qps(),
@@ -630,6 +671,15 @@ def create_app(config: dict | None = None) -> Flask:
             }
         )
 
+    @app.get("/admin/export.json")
+    def admin_export():
+        if not _is_authorized(app, "ADMIN_TOKEN"):
+            return _auth_error()
+        response = jsonify(export_snapshot(app))
+        response.headers["Content-Disposition"] = f'attachment; filename="asteria-export-{APP_VERSION}.json"'
+        response.headers["Cache-Control"] = "no-store"
+        return response
+
     @app.get("/openapi.json")
     def openapi_json():
         return jsonify(
@@ -644,6 +694,7 @@ def create_app(config: dict | None = None) -> Flask:
                     "/api/changelog": {"get": {"summary": "Versioned changelog entries"}},
                     "/api/integrations": {"get": {"summary": "Cloud integration readiness"}},
                     "/admin/contacts": {"get": {"summary": "Token-protected contact summaries"}},
+                    "/admin/export.json": {"get": {"summary": "Token-protected privacy-preserving ops export"}},
                     "/contact": {"post": {"summary": "Submit a contact brief"}},
                 },
             }
@@ -676,6 +727,12 @@ def create_app(config: dict | None = None) -> Flask:
         if request.content_length and request.content_length > MAX_CONTACT_BYTES:
             return jsonify({"ok": False, "message": "Please keep the brief under 4KB."}), 413
 
+        payload = request.get_json(silent=True) or request.form
+        honeypot_field = str(app.config["CONTACT_HONEYPOT_FIELD"])
+        if honeypot_field and str(payload.get(honeypot_field, "")).strip():
+            _metrics["contact_spam_blocked"] += 1
+            return jsonify({"ok": True, "message": "Thanks. Your brief is ready for review."})
+
         client_key = _client_key()
         if _contact_limited(
             client_key,
@@ -683,17 +740,15 @@ def create_app(config: dict | None = None) -> Flask:
             int(app.config["CONTACT_RATE_WINDOW"]),
         ):
             _metrics["contact_rate_limited"] += 1
-            return (
-                jsonify(
-                    {
-                        "ok": False,
-                        "message": "Too many briefs from this connection. Please try again in a minute.",
-                    }
-                ),
-                429,
+            response = jsonify(
+                {
+                    "ok": False,
+                    "message": "Too many briefs from this connection. Please try again in a minute.",
+                }
             )
+            response.headers["Retry-After"] = str(int(app.config["CONTACT_RATE_WINDOW"]))
+            return response, 429
 
-        payload = request.get_json(silent=True) or request.form
         name = str(payload.get("name", "")).strip()
         email = str(payload.get("email", "")).strip()
         message = str(payload.get("message", "")).strip()

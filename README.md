@@ -26,7 +26,8 @@ Then open `http://127.0.0.1:5000`.
 - `/api/integrations` - Vercel/Supabase integration readiness without exposing secrets.
 - `/openapi.json` - lightweight OpenAPI-style endpoint contract.
 - `/admin/contacts` - optional Bearer-token protected contact summaries.
-- `/contact` - JSON/form endpoint with payload caps, email validation, and per-client rate limiting.
+- `/admin/export.json` - optional Bearer-token protected privacy-preserving ops export.
+- `/contact` - JSON/form endpoint with payload caps, honeypot handling, email validation, and per-client rate limiting.
 
 Optional environment variables:
 
@@ -37,6 +38,7 @@ CONTACT_MAX_MESSAGE_LENGTH=1200
 CONTACT_DB_PATH=contacts.sqlite3
 CONTACT_HASH_SALT=replace-me
 CONTACT_RETENTION_DAYS=90
+CONTACT_HONEYPOT_FIELD=website
 METRICS_TOKEN=optional-secret
 ADMIN_TOKEN=optional-secret
 TRUST_PROXY_HEADERS=false
@@ -52,6 +54,8 @@ SUPABASE_TIMEOUT_SECONDS=3
 This repo includes `vercel.json`, `[tool.vercel]` metadata, and `scripts/vercel_build.py`. Vercel runs the build helper to copy `static/**` into `public/static/**`, then serves the Flask app from `app:app`.
 
 Optional Supabase contact sync is backend-only. Apply the SQL in `supabase/migrations`, set `SUPABASE_URL` and `SUPABASE_SECRET_KEY`, and contact submissions will still write locally while also posting privacy-preserving hashes to Supabase.
+
+For spam resistance, include a hidden `website` field in contact forms and leave it empty. Bot submissions that fill it are soft-accepted, counted in metrics, and not stored.
 
 ## Docker
 

@@ -23,6 +23,8 @@ Contact submissions are stored in SQLite with WAL enabled and an index on `creat
 - `/metrics` reports request count, error count, average latency, contact submissions, rate-limited requests, and rolling 60-second QPS.
 - Set `METRICS_TOKEN` to require `Authorization: Bearer <token>` for `/metrics`.
 - Set `ADMIN_TOKEN` to protect `/admin/contacts`, which returns hash prefixes and message previews rather than raw email addresses.
+- `/admin/export.json` returns a no-raw-email export of recent contacts, metrics, and integration state for support handoffs.
+- `CONTACT_HONEYPOT_FIELD` defaults to `website`; filled honeypot submissions are counted and ignored without revealing the filter.
 - `/openapi.json` and `/api/status` make integration and uptime checks easier for external tools.
 
 ## Serverless Path

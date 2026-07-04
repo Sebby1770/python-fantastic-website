@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.4.0 - 2026-07-04
+
+- Added configurable honeypot handling for contact spam without exposing bot-blocking behavior to clients.
+- Added `Retry-After` headers for rate-limited contact requests.
+- Added `/admin/export.json` for token-protected privacy-preserving contact, metrics, and integration exports.
+
 ## 2.3.0 - 2026-07-04
 
 - Added Vercel configuration, a Vercel build helper, and `app:app` module export for Python Function deployment.
