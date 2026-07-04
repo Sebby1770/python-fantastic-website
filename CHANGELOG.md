@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.2.0 - 2026-07-04
+
+- Added `/api/status`, `/api/changelog`, and `/openapi.json` for API discovery and integration.
+- Added optional Bearer-token protection for `/metrics` and `/admin/contacts`.
+- Added privacy-preserving admin contact summaries with hash prefixes instead of raw email or client identifiers.
+- Added contact retention pruning and stronger cross-origin/HSTS response headers.
+- Expanded tests for API discovery, ops tokens, contact summaries, and security headers.
+
 ## 2.1.0 - 2026-06-30
 
 - Added request IDs, response timing headers, JSON metrics, and rolling 60-second QPS reporting.

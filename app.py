@@ -5,8 +5,9 @@ import secrets
 import sqlite3
 import time
 from collections import defaultdict, deque
+from dataclasses import asdict
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from email.utils import parseaddr
 from hashlib import sha256
 from pathlib import Path
@@ -17,7 +18,7 @@ from werkzeug.exceptions import HTTPException
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 
-APP_VERSION = "2.1.0"
+APP_VERSION = "2.2.0"
 STARTED_AT = datetime.now(timezone.utc)
 CONTACT_LIMIT_DEFAULT = 5
 CONTACT_WINDOW_DEFAULT = 60
@@ -152,6 +153,16 @@ STACK_SIGNALS = [
 
 CHANGELOG = [
     ChangelogEntry(
+        "2.2.0",
+        "2026-07-04",
+        "Added API discovery, optional ops authentication, and retention controls.",
+        (
+            "Added JSON status, changelog, and OpenAPI-style contract endpoints.",
+            "Added optional Bearer-token protection for metrics and admin contact summaries.",
+            "Added contact retention pruning and stronger cross-origin isolation headers.",
+        ),
+    ),
+    ChangelogEntry(
         "2.1.0",
         "2026-06-30",
         "Added observability, embedded storage, and staging manifests.",
@@ -217,6 +228,18 @@ def _hash_value(value: str, salt: str) -> str:
     return sha256(f"{salt}:{value}".encode("utf-8")).hexdigest()
 
 
+def _is_authorized(app: Flask, config_key: str) -> bool:
+    expected = str(app.config.get(config_key) or "").strip()
+    if not expected:
+        return True
+    provided = request.headers.get("Authorization", "")
+    return secrets.compare_digest(provided, f"Bearer {expected}")
+
+
+def _auth_error() -> tuple[Response, int]:
+    return jsonify({"ok": False, "message": "Missing or invalid bearer token."}), 401
+
+
 def _contact_store_path(app: Flask) -> Path:
     configured = Path(str(app.config["CONTACT_DB_PATH"]))
     if configured.is_absolute():
@@ -248,6 +271,16 @@ def init_contact_store(app: Flask) -> None:
         )
 
 
+def prune_contact_store(app: Flask) -> int:
+    retention_days = int(app.config["CONTACT_RETENTION_DAYS"])
+    if retention_days <= 0:
+        return 0
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=retention_days)).isoformat(timespec="seconds")
+    with sqlite3.connect(_contact_store_path(app)) as connection:
+        cursor = connection.execute("DELETE FROM contact_submissions WHERE created_at < ?", (cutoff,))
+        return int(cursor.rowcount)
+
+
 def store_contact(app: Flask, name: str, email: str, message: str, client_key: str) -> None:
     salt = str(app.config["CONTACT_HASH_SALT"])
     with sqlite3.connect(_contact_store_path(app)) as connection:
@@ -274,6 +307,32 @@ def contact_count(app: Flask) -> int:
     return int(row[0])
 
 
+def recent_contacts(app: Flask, limit: int) -> list[dict]:
+    with sqlite3.connect(_contact_store_path(app)) as connection:
+        connection.row_factory = sqlite3.Row
+        rows = connection.execute(
+            """
+            SELECT id, created_at, name, email_hash, client_hash, message_preview, request_id
+            FROM contact_submissions
+            ORDER BY id DESC
+            LIMIT ?
+            """,
+            (limit,),
+        ).fetchall()
+    return [
+        {
+            "id": row["id"],
+            "created_at": row["created_at"],
+            "name": row["name"],
+            "email_hash_prefix": row["email_hash"][:12],
+            "client_hash_prefix": row["client_hash"][:12],
+            "message_preview": row["message_preview"],
+            "request_id": row["request_id"],
+        }
+        for row in rows
+    ]
+
+
 def current_qps() -> float:
     now = time.monotonic()
     while _request_times and now - _request_times[0] > REQUEST_WINDOW_SECONDS:
@@ -289,7 +348,11 @@ def create_app(config: dict | None = None) -> Flask:
         CONTACT_MAX_MESSAGE_LENGTH=int(os.getenv("CONTACT_MAX_MESSAGE_LENGTH", 1200)),
         CONTACT_DB_PATH=os.getenv("CONTACT_DB_PATH", "contacts.sqlite3"),
         CONTACT_HASH_SALT=os.getenv("CONTACT_HASH_SALT", "local-dev-salt"),
+        CONTACT_RETENTION_DAYS=int(os.getenv("CONTACT_RETENTION_DAYS", "90")),
+        METRICS_TOKEN=os.getenv("METRICS_TOKEN", ""),
+        ADMIN_TOKEN=os.getenv("ADMIN_TOKEN", ""),
         TRUST_PROXY_HEADERS=_truthy(os.getenv("TRUST_PROXY_HEADERS")),
+        FORCE_HTTPS=_truthy(os.getenv("FORCE_HTTPS")),
         SITE_NAME="Asteria Studio",
         APP_VERSION=APP_VERSION,
     )
@@ -300,6 +363,7 @@ def create_app(config: dict | None = None) -> Flask:
         app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
 
     init_contact_store(app)
+    prune_contact_store(app)
 
     @app.before_request
     def start_observation() -> None:
@@ -320,6 +384,10 @@ def create_app(config: dict | None = None) -> Flask:
         response.headers.setdefault("X-Frame-Options", "DENY")
         response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
         response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+        response.headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
+        response.headers.setdefault("Cross-Origin-Resource-Policy", "same-origin")
+        if request.is_secure or app.config["FORCE_HTTPS"]:
+            response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
         response.headers.setdefault(
             "Content-Security-Policy",
             "default-src 'self'; img-src 'self' data:; style-src 'self'; "
@@ -370,6 +438,33 @@ def create_app(config: dict | None = None) -> Flask:
     def health():
         return jsonify({"ok": True, "service": "asteria-studio", "version": APP_VERSION})
 
+    @app.get("/api/status")
+    def api_status():
+        return jsonify(
+            {
+                "ok": True,
+                "service": "asteria-studio",
+                "version": APP_VERSION,
+                "uptime_seconds": int((datetime.now(timezone.utc) - STARTED_AT).total_seconds()),
+                "rate_limit": {
+                    "contact_limit": int(app.config["CONTACT_RATE_LIMIT"]),
+                    "window_seconds": int(app.config["CONTACT_RATE_WINDOW"]),
+                },
+                "features": [
+                    "contact-ledger",
+                    "metrics",
+                    "request-ids",
+                    "openapi",
+                    "docker",
+                    "kubernetes",
+                ],
+            }
+        )
+
+    @app.get("/api/changelog")
+    def api_changelog():
+        return jsonify({"version": APP_VERSION, "entries": [asdict(entry) for entry in CHANGELOG]})
+
     @app.get("/ready")
     def ready():
         uptime = datetime.now(timezone.utc) - STARTED_AT
@@ -390,6 +485,8 @@ def create_app(config: dict | None = None) -> Flask:
 
     @app.get("/metrics")
     def metrics():
+        if not _is_authorized(app, "METRICS_TOKEN"):
+            return _auth_error()
         requests = max(1, int(_metrics["requests"]))
         return jsonify(
             {
@@ -402,6 +499,38 @@ def create_app(config: dict | None = None) -> Flask:
                 "qps_60s": current_qps(),
                 "avg_latency_ms": round(float(_metrics["latency_ms_total"]) / requests, 2),
                 "stored_contact_count": contact_count(app),
+            }
+        )
+
+    @app.get("/admin/contacts")
+    def admin_contacts():
+        if not _is_authorized(app, "ADMIN_TOKEN"):
+            return _auth_error()
+        limit = min(100, max(1, int(request.args.get("limit", 20))))
+        return jsonify(
+            {
+                "ok": True,
+                "count": contact_count(app),
+                "retention_days": int(app.config["CONTACT_RETENTION_DAYS"]),
+                "contacts": recent_contacts(app, limit),
+            }
+        )
+
+    @app.get("/openapi.json")
+    def openapi_json():
+        return jsonify(
+            {
+                "openapi": "3.1.0",
+                "info": {"title": "Asteria Studio API", "version": APP_VERSION},
+                "paths": {
+                    "/health": {"get": {"summary": "Liveness probe"}},
+                    "/ready": {"get": {"summary": "Readiness probe"}},
+                    "/metrics": {"get": {"summary": "JSON request and contact metrics"}},
+                    "/api/status": {"get": {"summary": "Public application status"}},
+                    "/api/changelog": {"get": {"summary": "Versioned changelog entries"}},
+                    "/admin/contacts": {"get": {"summary": "Token-protected contact summaries"}},
+                    "/contact": {"post": {"summary": "Submit a contact brief"}},
+                },
             }
         )
 

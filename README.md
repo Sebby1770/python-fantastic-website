@@ -1,6 +1,6 @@
 # Asteria Studio
 
-A polished Python-powered website built with Flask, responsive HTML/CSS, local generated PNG assets, and route tests. The refresh adds launch-readiness features inspired by production infrastructure basics: Docker staging, CI, status probes, security headers, rate limiting, embedded SQLite, metrics/QPS, load-balancer awareness, robots, sitemap, and a visible changelog.
+A polished Python-powered website built with Flask, responsive HTML/CSS, local generated PNG assets, and route tests. The refresh adds launch-readiness features inspired by production infrastructure basics: Docker staging, CI, status probes, security headers, rate limiting, embedded SQLite, metrics/QPS, token-protected ops endpoints, load-balancer awareness, robots, sitemap, API discovery, and a visible changelog.
 
 ## Run locally
 
@@ -21,6 +21,10 @@ Then open `http://127.0.0.1:5000`.
 - `/robots.txt` - crawler policy with sitemap URL.
 - `/sitemap.xml` - crawlable public route inventory.
 - `/metrics` - JSON metrics for requests, errors, QPS, latency, contacts, and rate limiting.
+- `/api/status` - public machine-readable app status.
+- `/api/changelog` - versioned changelog data.
+- `/openapi.json` - lightweight OpenAPI-style endpoint contract.
+- `/admin/contacts` - optional Bearer-token protected contact summaries.
 - `/contact` - JSON/form endpoint with payload caps, email validation, and per-client rate limiting.
 
 Optional environment variables:
@@ -31,7 +35,11 @@ CONTACT_RATE_WINDOW=60
 CONTACT_MAX_MESSAGE_LENGTH=1200
 CONTACT_DB_PATH=contacts.sqlite3
 CONTACT_HASH_SALT=replace-me
+CONTACT_RETENTION_DAYS=90
+METRICS_TOKEN=optional-secret
+ADMIN_TOKEN=optional-secret
 TRUST_PROXY_HEADERS=false
+FORCE_HTTPS=false
 ```
 
 ## Docker

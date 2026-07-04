@@ -42,13 +42,15 @@ def test_ready_endpoint_reports_checks():
 
 
 def test_public_routes_include_security_headers():
-    app = create_app()
+    app = create_app({"FORCE_HTTPS": True})
 
     with app.test_client() as client:
         response = client.get("/")
 
     assert response.headers["X-Content-Type-Options"] == "nosniff"
     assert response.headers["X-Frame-Options"] == "DENY"
+    assert response.headers["Cross-Origin-Opener-Policy"] == "same-origin"
+    assert "max-age=31536000" in response.headers["Strict-Transport-Security"]
     assert "default-src 'self'" in response.headers["Content-Security-Policy"]
 
 
@@ -138,6 +140,61 @@ def test_metrics_endpoint_reports_qps_and_contacts(tmp_path):
     assert payload["requests"] >= 2
     assert payload["qps_60s"] > 0
     assert payload["stored_contact_count"] == 1
+
+
+def test_metrics_endpoint_can_require_bearer_token(tmp_path):
+    app = create_app({"CONTACT_DB_PATH": str(tmp_path / "contacts.sqlite3"), "METRICS_TOKEN": "secret"})
+
+    with app.test_client() as client:
+        denied = client.get("/metrics")
+        allowed = client.get("/metrics", headers={"Authorization": "Bearer secret"})
+
+    assert denied.status_code == 401
+    assert allowed.status_code == 200
+
+
+def test_admin_contacts_return_privacy_preserving_summaries(tmp_path):
+    app = create_app(
+        {
+            "CONTACT_DB_PATH": str(tmp_path / "contacts.sqlite3"),
+            "CONTACT_RATE_LIMIT": 20,
+            "ADMIN_TOKEN": "admin-secret",
+        }
+    )
+
+    with app.test_client() as client:
+        client.post(
+            "/contact",
+            json={
+                "name": "Grace Hopper",
+                "email": "grace@example.com",
+                "message": "I need a production launch system.",
+            },
+        )
+        denied = client.get("/admin/contacts")
+        allowed = client.get("/admin/contacts", headers={"Authorization": "Bearer admin-secret"})
+
+    payload = allowed.get_json()
+    assert denied.status_code == 401
+    assert allowed.status_code == 200
+    assert payload["count"] == 1
+    assert payload["contacts"][0]["name"] == "Grace Hopper"
+    assert "email_hash_prefix" in payload["contacts"][0]
+    assert "grace@example.com" not in str(payload)
+
+
+def test_api_discovery_routes_render():
+    app = create_app()
+
+    with app.test_client() as client:
+        status = client.get("/api/status")
+        changelog = client.get("/api/changelog")
+        openapi = client.get("/openapi.json")
+
+    assert status.status_code == 200
+    assert status.get_json()["version"]
+    assert changelog.get_json()["entries"][0]["version"] == "2.2.0"
+    assert openapi.get_json()["openapi"] == "3.1.0"
 
 
 def test_contact_rate_limits_bursts():

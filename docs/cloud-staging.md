@@ -21,6 +21,9 @@ Contact submissions are stored in SQLite with WAL enabled and an index on `creat
 - `X-Request-ID` is returned on each response.
 - `X-Response-Time-Ms` exposes request latency.
 - `/metrics` reports request count, error count, average latency, contact submissions, rate-limited requests, and rolling 60-second QPS.
+- Set `METRICS_TOKEN` to require `Authorization: Bearer <token>` for `/metrics`.
+- Set `ADMIN_TOKEN` to protect `/admin/contacts`, which returns hash prefixes and message previews rather than raw email addresses.
+- `/openapi.json` and `/api/status` make integration and uptime checks easier for external tools.
 
 ## Serverless Path
 
