@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import json
 import secrets
 import sqlite3
 import time
@@ -12,13 +13,14 @@ from email.utils import parseaddr
 from hashlib import sha256
 from pathlib import Path
 from typing import Deque
+from urllib.request import Request, urlopen
 
 from flask import Flask, Response, g, jsonify, render_template, request, url_for
 from werkzeug.exceptions import HTTPException
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 
-APP_VERSION = "2.2.0"
+APP_VERSION = "2.3.0"
 STARTED_AT = datetime.now(timezone.utc)
 CONTACT_LIMIT_DEFAULT = 5
 CONTACT_WINDOW_DEFAULT = 60
@@ -153,6 +155,16 @@ STACK_SIGNALS = [
 
 CHANGELOG = [
     ChangelogEntry(
+        "2.3.0",
+        "2026-07-04",
+        "Added Vercel deployment readiness and optional Supabase contact sync.",
+        (
+            "Added Vercel function configuration plus a build helper that publishes static assets under public/static.",
+            "Added optional Supabase REST sync for privacy-preserving contact submissions using backend-only secret keys.",
+            "Added integration discovery output, Supabase migration SQL, and deployment environment examples.",
+        ),
+    ),
+    ChangelogEntry(
         "2.2.0",
         "2026-07-04",
         "Added API discovery, optional ops authentication, and retention controls.",
@@ -200,6 +212,8 @@ _metrics = {
     "errors": 0,
     "contact_submissions": 0,
     "contact_rate_limited": 0,
+    "supabase_contact_syncs": 0,
+    "supabase_contact_sync_errors": 0,
     "latency_ms_total": 0.0,
 }
 
@@ -238,6 +252,62 @@ def _is_authorized(app: Flask, config_key: str) -> bool:
 
 def _auth_error() -> tuple[Response, int]:
     return jsonify({"ok": False, "message": "Missing or invalid bearer token."}), 401
+
+
+def supabase_enabled(app: Flask) -> bool:
+    return bool(str(app.config.get("SUPABASE_URL", "")).strip()) and bool(
+        str(app.config.get("SUPABASE_SECRET_KEY", "")).strip()
+    )
+
+
+def sync_contact_to_supabase(
+    app: Flask,
+    *,
+    name: str,
+    email_hash: str,
+    client_hash: str,
+    message_preview: str,
+    request_id: str,
+) -> bool:
+    if not supabase_enabled(app):
+        return False
+
+    supabase_url = str(app.config["SUPABASE_URL"]).rstrip("/")
+    table_name = str(app.config["SUPABASE_CONTACT_TABLE"]).strip() or "asteria_contact_submissions"
+    secret_key = str(app.config["SUPABASE_SECRET_KEY"])
+    payload = {
+        "name": name,
+        "email_hash": email_hash,
+        "client_hash": client_hash,
+        "message_preview": message_preview,
+        "request_id": request_id,
+        "app_version": APP_VERSION,
+    }
+    request = Request(
+        f"{supabase_url}/rest/v1/{table_name}",
+        data=json.dumps(payload).encode("utf-8"),
+        method="POST",
+        headers={
+            "apikey": secret_key,
+            "Authorization": f"Bearer {secret_key}",
+            "Content-Type": "application/json",
+            "Prefer": "return=minimal",
+        },
+    )
+    try:
+        with urlopen(request, timeout=float(app.config["SUPABASE_TIMEOUT_SECONDS"])) as response:
+            status = int(getattr(response, "status", 201))
+            if status >= 400:
+                raise RuntimeError(f"Supabase REST API returned HTTP {status}")
+        _metrics["supabase_contact_syncs"] += 1
+        return True
+    except Exception as error:
+        _metrics["supabase_contact_sync_errors"] += 1
+        app.logger.warning(
+            "Supabase contact sync failed",
+            extra={"request_id": request_id, "error": str(error)},
+        )
+        return False
 
 
 def _contact_store_path(app: Flask) -> Path:
@@ -283,6 +353,10 @@ def prune_contact_store(app: Flask) -> int:
 
 def store_contact(app: Flask, name: str, email: str, message: str, client_key: str) -> None:
     salt = str(app.config["CONTACT_HASH_SALT"])
+    email_hash = _hash_value(email.lower(), salt)
+    client_hash = _hash_value(client_key, salt)
+    message_preview = message[:160]
+    request_id = getattr(g, "request_id", "unknown")
     with sqlite3.connect(_contact_store_path(app)) as connection:
         connection.execute(
             """
@@ -293,12 +367,20 @@ def store_contact(app: Flask, name: str, email: str, message: str, client_key: s
             (
                 datetime.now(timezone.utc).isoformat(timespec="seconds"),
                 name,
-                _hash_value(email.lower(), salt),
-                _hash_value(client_key, salt),
-                message[:160],
-                getattr(g, "request_id", "unknown"),
+                email_hash,
+                client_hash,
+                message_preview,
+                request_id,
             ),
         )
+    sync_contact_to_supabase(
+        app,
+        name=name,
+        email_hash=email_hash,
+        client_hash=client_hash,
+        message_preview=message_preview,
+        request_id=request_id,
+    )
 
 
 def contact_count(app: Flask) -> int:
@@ -346,11 +428,18 @@ def create_app(config: dict | None = None) -> Flask:
         CONTACT_RATE_LIMIT=int(os.getenv("CONTACT_RATE_LIMIT", CONTACT_LIMIT_DEFAULT)),
         CONTACT_RATE_WINDOW=int(os.getenv("CONTACT_RATE_WINDOW", CONTACT_WINDOW_DEFAULT)),
         CONTACT_MAX_MESSAGE_LENGTH=int(os.getenv("CONTACT_MAX_MESSAGE_LENGTH", 1200)),
-        CONTACT_DB_PATH=os.getenv("CONTACT_DB_PATH", "contacts.sqlite3"),
+        CONTACT_DB_PATH=os.getenv(
+            "CONTACT_DB_PATH",
+            "/tmp/contacts.sqlite3" if _truthy(os.getenv("VERCEL")) else "contacts.sqlite3",
+        ),
         CONTACT_HASH_SALT=os.getenv("CONTACT_HASH_SALT", "local-dev-salt"),
         CONTACT_RETENTION_DAYS=int(os.getenv("CONTACT_RETENTION_DAYS", "90")),
         METRICS_TOKEN=os.getenv("METRICS_TOKEN", ""),
         ADMIN_TOKEN=os.getenv("ADMIN_TOKEN", ""),
+        SUPABASE_URL=os.getenv("SUPABASE_URL", ""),
+        SUPABASE_SECRET_KEY=os.getenv("SUPABASE_SECRET_KEY") or os.getenv("SUPABASE_SERVICE_ROLE_KEY", ""),
+        SUPABASE_CONTACT_TABLE=os.getenv("SUPABASE_CONTACT_TABLE", "asteria_contact_submissions"),
+        SUPABASE_TIMEOUT_SECONDS=float(os.getenv("SUPABASE_TIMEOUT_SECONDS", "3")),
         TRUST_PROXY_HEADERS=_truthy(os.getenv("TRUST_PROXY_HEADERS")),
         FORCE_HTTPS=_truthy(os.getenv("FORCE_HTTPS")),
         SITE_NAME="Asteria Studio",
@@ -440,6 +529,17 @@ def create_app(config: dict | None = None) -> Flask:
 
     @app.get("/api/status")
     def api_status():
+        features = [
+            "contact-ledger",
+            "metrics",
+            "request-ids",
+            "openapi",
+            "docker",
+            "kubernetes",
+            "vercel",
+        ]
+        if supabase_enabled(app):
+            features.append("supabase-contact-sync")
         return jsonify(
             {
                 "ok": True,
@@ -450,20 +550,32 @@ def create_app(config: dict | None = None) -> Flask:
                     "contact_limit": int(app.config["CONTACT_RATE_LIMIT"]),
                     "window_seconds": int(app.config["CONTACT_RATE_WINDOW"]),
                 },
-                "features": [
-                    "contact-ledger",
-                    "metrics",
-                    "request-ids",
-                    "openapi",
-                    "docker",
-                    "kubernetes",
-                ],
+                "features": features,
             }
         )
 
     @app.get("/api/changelog")
     def api_changelog():
         return jsonify({"version": APP_VERSION, "entries": [asdict(entry) for entry in CHANGELOG]})
+
+    @app.get("/api/integrations")
+    def api_integrations():
+        return jsonify(
+            {
+                "ok": True,
+                "version": APP_VERSION,
+                "vercel": {
+                    "entrypoint": "app.py",
+                    "static_asset_build": "scripts/vercel_build.py",
+                    "configured": True,
+                },
+                "supabase": {
+                    "contact_sync_enabled": supabase_enabled(app),
+                    "contact_table": str(app.config["SUPABASE_CONTACT_TABLE"]),
+                    "uses_backend_secret": bool(str(app.config["SUPABASE_SECRET_KEY"]).strip()),
+                },
+            }
+        )
 
     @app.get("/ready")
     def ready():
@@ -496,6 +608,8 @@ def create_app(config: dict | None = None) -> Flask:
                 "errors": int(_metrics["errors"]),
                 "contact_submissions": int(_metrics["contact_submissions"]),
                 "contact_rate_limited": int(_metrics["contact_rate_limited"]),
+                "supabase_contact_syncs": int(_metrics["supabase_contact_syncs"]),
+                "supabase_contact_sync_errors": int(_metrics["supabase_contact_sync_errors"]),
                 "qps_60s": current_qps(),
                 "avg_latency_ms": round(float(_metrics["latency_ms_total"]) / requests, 2),
                 "stored_contact_count": contact_count(app),
@@ -528,6 +642,7 @@ def create_app(config: dict | None = None) -> Flask:
                     "/metrics": {"get": {"summary": "JSON request and contact metrics"}},
                     "/api/status": {"get": {"summary": "Public application status"}},
                     "/api/changelog": {"get": {"summary": "Versioned changelog entries"}},
+                    "/api/integrations": {"get": {"summary": "Cloud integration readiness"}},
                     "/admin/contacts": {"get": {"summary": "Token-protected contact summaries"}},
                     "/contact": {"post": {"summary": "Submit a contact brief"}},
                 },
@@ -617,5 +732,8 @@ def create_app(config: dict | None = None) -> Flask:
     return app
 
 
+app = create_app()
+
+
 if __name__ == "__main__":
-    create_app().run(debug=_truthy(os.getenv("FLASK_DEBUG")))
+    app.run(debug=_truthy(os.getenv("FLASK_DEBUG")))

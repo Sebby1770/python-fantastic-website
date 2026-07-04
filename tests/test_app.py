@@ -1,4 +1,5 @@
 import sqlite3
+import json
 
 from app import create_app
 
@@ -189,12 +190,64 @@ def test_api_discovery_routes_render():
     with app.test_client() as client:
         status = client.get("/api/status")
         changelog = client.get("/api/changelog")
+        integrations = client.get("/api/integrations")
         openapi = client.get("/openapi.json")
 
     assert status.status_code == 200
     assert status.get_json()["version"]
-    assert changelog.get_json()["entries"][0]["version"] == "2.2.0"
+    assert "vercel" in status.get_json()["features"]
+    assert changelog.get_json()["entries"][0]["version"] == "2.3.0"
+    assert integrations.get_json()["vercel"]["configured"] is True
     assert openapi.get_json()["openapi"] == "3.1.0"
+
+
+def test_contact_can_sync_privacy_payload_to_supabase(tmp_path, monkeypatch):
+    calls = []
+
+    class FakeResponse:
+        status = 201
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, traceback):
+            return False
+
+    def fake_urlopen(request, timeout):
+        calls.append((request, timeout))
+        return FakeResponse()
+
+    monkeypatch.setattr("app.urlopen", fake_urlopen)
+    app = create_app(
+        {
+            "CONTACT_DB_PATH": str(tmp_path / "contacts.sqlite3"),
+            "CONTACT_RATE_LIMIT": 20,
+            "SUPABASE_URL": "https://example.supabase.co",
+            "SUPABASE_SECRET_KEY": "sb_secret_test",
+            "SUPABASE_CONTACT_TABLE": "asteria_contact_submissions",
+            "SUPABASE_TIMEOUT_SECONDS": 1,
+        }
+    )
+
+    with app.test_client() as client:
+        response = client.post(
+            "/contact",
+            json={
+                "name": "Ada Lovelace",
+                "email": "ada@example.com",
+                "message": "I need a launch site for a Python product.",
+            },
+        )
+
+    assert response.status_code == 200
+    assert len(calls) == 1
+    request, timeout = calls[0]
+    body = json.loads(request.data.decode("utf-8"))
+    assert request.full_url == "https://example.supabase.co/rest/v1/asteria_contact_submissions"
+    assert timeout == 1
+    assert body["name"] == "Ada Lovelace"
+    assert body["email_hash"] != "ada@example.com"
+    assert "ada@example.com" not in request.data.decode("utf-8")
 
 
 def test_contact_rate_limits_bursts():

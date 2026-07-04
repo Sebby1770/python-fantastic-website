@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.3.0 - 2026-07-04
+
+- Added Vercel configuration, a Vercel build helper, and `app:app` module export for Python Function deployment.
+- Added optional backend-only Supabase contact sync with hashed email/client identifiers and no raw email storage.
+- Added Supabase migration SQL, `.env.example`, `/api/integrations`, and tests for the privacy-preserving sync payload.
+
 ## 2.2.0 - 2026-07-04
 
 - Added `/api/status`, `/api/changelog`, and `/openapi.json` for API discovery and integration.

@@ -33,3 +33,9 @@ For Lambda-style deployment, keep the contact ledger external. Good fits:
 - DynamoDB for submission metadata.
 - S3 for generated site assets.
 - CloudWatch alarms on `/metrics` counters or API Gateway logs.
+
+## Vercel And Supabase
+
+Vercel support is configured through `vercel.json` and `[tool.vercel]` in `pyproject.toml`. The build step copies Flask static assets into `public/static` so they can be served from Vercel's CDN while `app.py` runs as the Python Function.
+
+Supabase contact sync is optional and server-side only. Apply `supabase/migrations/*_asteria_contact_submissions.sql`, then set `SUPABASE_URL` and `SUPABASE_SECRET_KEY` in Vercel. The app sends only hashed email/client identifiers plus a short message preview. On Vercel, the local SQLite fallback defaults to `/tmp/contacts.sqlite3`, so treat it as ephemeral and use Supabase for durable production records.
