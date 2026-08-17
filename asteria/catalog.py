@@ -47,7 +47,7 @@ class CaseStudy:
     attribution: str
 
 
-VERSION = "2.0.0"
+VERSION = "2.1.0"
 
 STATS = [
     Stat("47", "launches shipped"),
@@ -258,6 +258,10 @@ WORK = [
         attribution="Publisher, Harbor Press",
     ),
 ]
+
+
+def work_categories() -> tuple[str, ...]:
+    return tuple(dict.fromkeys(item.category for item in WORK))
 
 
 def get_study(slug: str) -> CaseStudy | None:

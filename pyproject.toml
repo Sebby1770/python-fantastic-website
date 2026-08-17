@@ -1,6 +1,6 @@
 [project]
 name = "asteria-studio"
-version = "2.0.0"
+version = "2.1.0"
 description = "Asteria Studio — an editorial Flask website for a digital practice."
 readme = "README.md"
 requires-python = ">=3.11"

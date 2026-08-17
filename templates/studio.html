@@ -12,6 +12,20 @@
   </header>
 
   <section class="section studio-inbox" aria-label="Inquiries">
+    <form class="studio-toolbar" method="get" action="{{ url_for('studio') }}">
+      <input type="hidden" name="token" value="{{ studio_token }}">
+      <label class="sr-only" for="studio-q">Search inquiries</label>
+      <input id="studio-q" type="search" name="q" value="{{ studio_query }}" placeholder="Search name, email, message">
+      <label class="sr-only" for="studio-status">Status</label>
+      <select id="studio-status" name="status">
+        <option value=""{% if not studio_status %} selected{% endif %}>All statuses</option>
+        <option value="new"{% if studio_status == "new" %} selected{% endif %}>New</option>
+        <option value="archived"{% if studio_status == "archived" %} selected{% endif %}>Archived</option>
+      </select>
+      <button class="button button-secondary" type="submit">Filter</button>
+      <a class="button button-secondary" href="{{ url_for('studio_csv', token=studio_token, q=studio_query, status=studio_status) }}">Export CSV</a>
+    </form>
+
     {% if not inquiries %}
       <p class="empty-note">The tray is empty.</p>
     {% else %}
@@ -32,12 +46,25 @@
               </p>
             </header>
             <p class="inquiry-message">{{ item["message"] }}</p>
-            {% if item["status"] != "archived" %}
-              <form method="post" action="{{ url_for('studio_archive', inquiry_id=item['id']) }}">
-                <input type="hidden" name="token" value="{{ studio_token }}">
-                <button class="button button-secondary" type="submit">Archive</button>
-              </form>
-            {% endif %}
+            <form class="inquiry-notes" method="post" action="{{ url_for('studio_notes', inquiry_id=item['id']) }}">
+              <input type="hidden" name="token" value="{{ studio_token }}">
+              <label for="notes-{{ item['id'] }}">Notes</label>
+              <textarea id="notes-{{ item['id'] }}" name="notes" rows="3">{{ item["notes"] or "" }}</textarea>
+              <button class="button button-secondary" type="submit">Save notes</button>
+            </form>
+            <div class="inquiry-actions">
+              {% if item["status"] != "archived" %}
+                <form method="post" action="{{ url_for('studio_archive', inquiry_id=item['id']) }}">
+                  <input type="hidden" name="token" value="{{ studio_token }}">
+                  <button class="button button-secondary" type="submit">Archive</button>
+                </form>
+              {% else %}
+                <form method="post" action="{{ url_for('studio_unarchive', inquiry_id=item['id']) }}">
+                  <input type="hidden" name="token" value="{{ studio_token }}">
+                  <button class="button button-secondary" type="submit">Unarchive</button>
+                </form>
+              {% endif %}
+            </div>
           </li>
         {% endfor %}
       </ol>

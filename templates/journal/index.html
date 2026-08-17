@@ -15,7 +15,10 @@
       {% for post in posts %}
         <li>
           <article class="journal-item">
-            <time datetime="{{ post.iso_date }}">{{ post.date_label }}</time>
+            <p class="journal-meta">
+              <time datetime="{{ post.iso_date }}">{{ post.date_label }}</time>
+              <span>{{ post.reading_minutes }} min read</span>
+            </p>
             <h2><a href="{{ url_for('journal_detail', slug=post.slug) }}">{{ post.title }}</a></h2>
             <p>{{ post.dek }}</p>
           </article>

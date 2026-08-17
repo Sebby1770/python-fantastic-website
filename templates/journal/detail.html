@@ -1,17 +1,71 @@
 {% extends "base.html" %}
 
+{% block og_type %}article{% endblock %}
+
+{% block extra_head %}
+  <script type="application/ld+json">
+    {{ {
+      "@context": "https://schema.org",
+      "@type": "Article",
+      "headline": post.title,
+      "datePublished": post.iso_date
+    } | tojson }}
+  </script>
+{% endblock %}
+
 {% block content %}
   <article class="essay">
     <header class="page-mast">
-      <p class="eyebrow"><time datetime="{{ post.iso_date }}">{{ post.date_label }}</time></p>
+      <p class="eyebrow">
+        <time datetime="{{ post.iso_date }}">{{ post.date_label }}</time>
+        · {{ post.reading_minutes }} min read
+      </p>
       <h1>{{ post.title }}</h1>
       <p class="lede">{{ post.dek }}</p>
     </header>
     <div class="section prose">
       {{ post.html }}
     </div>
-    <p class="section section-more">
-      <a class="text-link" href="{{ url_for('journal_index') }}">All notes</a>
-    </p>
+    <nav class="section study-pager" aria-label="More journal notes">
+      {% if previous_item %}
+        <a href="{{ url_for('journal_detail', slug=previous_item.slug) }}">
+          <span>Previous</span>
+          {{ previous_item.title }}
+        </a>
+      {% else %}
+        <span></span>
+      {% endif %}
+      <a href="{{ url_for('journal_index') }}">All notes</a>
+      {% if next_item %}
+        <a href="{{ url_for('journal_detail', slug=next_item.slug) }}">
+          <span>Next</span>
+          {{ next_item.title }}
+        </a>
+      {% else %}
+        <span></span>
+      {% endif %}
+    </nav>
+    {% if related %}
+      <section class="section related-notes" aria-label="Related notes">
+        <div class="section-heading">
+          <p class="eyebrow">Related</p>
+          <h2>Two other notes from the desk.</h2>
+        </div>
+        <ol class="journal-list">
+          {% for item in related %}
+            <li>
+              <article class="journal-item">
+                <p class="journal-meta">
+                  <time datetime="{{ item.iso_date }}">{{ item.date_label }}</time>
+                  <span>{{ item.reading_minutes }} min read</span>
+                </p>
+                <h2><a href="{{ url_for('journal_detail', slug=item.slug) }}">{{ item.title }}</a></h2>
+                <p>{{ item.dek }}</p>
+              </article>
+            </li>
+          {% endfor %}
+        </ol>
+      </section>
+    {% endif %}
   </article>
 {% endblock %}

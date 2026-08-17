@@ -28,7 +28,7 @@ def test_health_endpoint():
     payload = response.get_json()
     assert payload["ok"] is True
     assert payload["service"] == "asteria-studio"
-    assert payload["version"] == "2.0.0"
+    assert payload["version"] == "2.1.0"
 
 
 def test_contact_requires_fields():
@@ -195,3 +195,96 @@ def test_studio_archives_inquiry(tmp_path):
     with sqlite3.connect(database) as conn:
         status = conn.execute("SELECT status FROM inquiries WHERE id = 1").fetchone()[0]
     assert status == "archived"
+
+
+def test_honeypot_does_not_create_a_row(tmp_path):
+    database = tmp_path / "inquiries.db"
+    app = create_app({"DATABASE": str(database)})
+
+    with app.test_client() as client:
+        response = client.post(
+            "/contact",
+            json={
+                "name": "Ada Lovelace",
+                "email": "ada@example.com",
+                "message": "I need a launch site for a Python product.",
+                "website": "https://spam.example",
+            },
+        )
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["ok"] is True
+    assert "Ada" in payload["message"]
+    if database.exists():
+        with sqlite3.connect(database) as conn:
+            tables = conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='inquiries'"
+            ).fetchone()
+            if tables:
+                count = conn.execute("SELECT COUNT(*) FROM inquiries").fetchone()[0]
+                assert count == 0
+
+
+def test_studio_csv_requires_token_and_includes_name(tmp_path):
+    database = tmp_path / "inquiries.db"
+    app = create_app({"DATABASE": str(database), "STUDIO_TOKEN": "secret-token"})
+
+    with app.test_client() as client:
+        client.post(
+            "/contact",
+            json={
+                "name": "Ada Lovelace",
+                "email": "ada@example.com",
+                "message": "I need a launch site for a Python product.",
+            },
+        )
+        denied = client.get("/studio.csv")
+        guessed = client.get("/studio.csv?token=guess")
+        allowed = client.get("/studio.csv?token=secret-token")
+
+    assert denied.status_code == 404
+    assert guessed.status_code == 404
+    assert allowed.status_code == 200
+    body = allowed.get_data(as_text=True)
+    assert "Ada Lovelace" in body
+    assert "ada@example.com" in body
+
+
+def test_studio_notes_and_unarchive(tmp_path):
+    database = tmp_path / "inquiries.db"
+    app = create_app({"DATABASE": str(database), "STUDIO_TOKEN": "secret-token"})
+
+    with app.test_client() as client:
+        client.post(
+            "/contact",
+            json={
+                "name": "Ada Lovelace",
+                "email": "ada@example.com",
+                "message": "Ready for notes.",
+            },
+        )
+        archived = client.post(
+            "/studio/1/archive",
+            headers={"X-Studio-Token": "secret-token"},
+            json={},
+        )
+        notes = client.post(
+            "/studio/1/notes",
+            headers={"X-Studio-Token": "secret-token"},
+            json={"notes": "Call next week"},
+        )
+        restored = client.post(
+            "/studio/1/unarchive",
+            headers={"X-Studio-Token": "secret-token"},
+            json={},
+        )
+
+    assert archived.status_code == 200
+    assert notes.status_code == 200
+    assert notes.get_json()["notes"] == "Call next week"
+    assert restored.status_code == 200
+    assert restored.get_json()["status"] == "new"
+    with sqlite3.connect(database) as conn:
+        row = conn.execute("SELECT notes, status FROM inquiries WHERE id = 1").fetchone()
+    assert row == ("Call next week", "new")

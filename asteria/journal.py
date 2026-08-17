@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from datetime import date, datetime
 from functools import lru_cache
@@ -20,6 +21,7 @@ class Post:
     title: str
     date: date
     dek: str
+    body: str
     html: Markup
     source: Path
 
@@ -30,6 +32,14 @@ class Post:
     @property
     def iso_date(self) -> str:
         return self.date.isoformat()
+
+    @property
+    def word_count(self) -> int:
+        return len(self.body.split())
+
+    @property
+    def reading_minutes(self) -> int:
+        return max(1, math.ceil(self.word_count / 220))
 
 
 def _split_frontmatter(text: str) -> tuple[dict[str, str], str]:
@@ -71,6 +81,7 @@ def _load_post(path: Path) -> Post:
         title=title,
         date=published,
         dek=dek,
+        body=body,
         html=_render(body),
         source=path,
     )
@@ -87,6 +98,21 @@ def load_posts() -> tuple[Post, ...]:
 
 def get_post(slug: str) -> Post | None:
     return next((post for post in load_posts() if post.slug == slug), None)
+
+
+def neighboring_posts(slug: str) -> tuple[Post | None, Post | None]:
+    posts = load_posts()
+    index = next((i for i, post in enumerate(posts) if post.slug == slug), None)
+    if index is None:
+        return None, None
+    previous_item = posts[index - 1] if index > 0 else None
+    next_item = posts[index + 1] if index + 1 < len(posts) else None
+    return previous_item, next_item
+
+
+def related_posts(slug: str, limit: int = 2) -> tuple[Post, ...]:
+    others = [post for post in load_posts() if post.slug != slug]
+    return tuple(others[:limit])
 
 
 def clear_post_cache() -> None:

@@ -1,5 +1,16 @@
 {% extends "base.html" %}
 
+{% block extra_head %}
+  <script type="application/ld+json">
+    {{ {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Asteria Studio",
+      "url": request.url_root.rstrip("/")
+    } | tojson }}
+  </script>
+{% endblock %}
+
 {% block content %}
   <section class="hero" aria-label="Asteria Studio introduction">
     <div class="hero-content reveal">

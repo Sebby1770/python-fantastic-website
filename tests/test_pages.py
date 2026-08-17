@@ -76,3 +76,70 @@ def test_custom_404_page():
 
     assert response.status_code == 404
     assert "not in the folio" in response.get_data(as_text=True).lower()
+
+
+def test_search_finds_work_and_journal_and_unknown():
+    app = create_app()
+
+    with app.test_client() as client:
+        work = client.get("/search?q=Northline")
+        journal = client.get("/search?q=Color as architecture")
+        unknown = client.get("/search?q=zzzz-not-a-real-phrase")
+        empty = client.get("/search")
+        blank = client.get("/search?q=")
+
+    assert work.status_code == 200
+    work_html = work.get_data(as_text=True)
+    assert "Northline" in work_html
+    assert "/work/northline" in work_html
+
+    assert journal.status_code == 200
+    journal_html = journal.get_data(as_text=True)
+    assert "Color as architecture" in journal_html
+    assert "/journal/color-as-architecture" in journal_html
+
+    assert unknown.status_code == 200
+    unknown_html = unknown.get_data(as_text=True)
+    assert "No matches" in unknown_html
+    assert "/work/northline" not in unknown_html
+    assert "/journal/color-as-architecture" not in unknown_html
+
+    for response in (empty, blank):
+        assert response.status_code == 200
+        html = response.get_data(as_text=True)
+        assert "/work/northline" not in html
+        assert "/journal/color-as-architecture" not in html
+        assert "Look through the folio" in html
+
+
+def test_work_category_filter():
+    app = create_app()
+
+    with app.test_client() as client:
+        filtered = client.get("/work", query_string={"category": "Brand platform"})
+        all_work = client.get("/work")
+
+    assert filtered.status_code == 200
+    filtered_html = filtered.get_data(as_text=True)
+    assert "Northline" in filtered_html
+    assert "Meridian" not in filtered_html
+    assert "Cobalt Room" not in filtered_html
+    assert "Harbor Press" not in filtered_html
+
+    assert all_work.status_code == 200
+    listing = all_work.get_data(as_text=True)
+    assert "Northline" in listing
+    assert "Meridian" in listing
+    assert ">All<" in listing or "All</a>" in listing
+
+
+def test_journal_detail_has_reading_time_and_neighbors():
+    app = create_app()
+
+    with app.test_client() as client:
+        response = client.get("/journal/color-as-architecture")
+
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert "min read" in html.lower()
+    assert "Previous" in html or "Next" in html
