@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <article class="study">
+    <header class="page-mast study-mast">
+      <p class="folio-index" aria-hidden="true">{{ study.folio }}</p>
+      <p class="eyebrow">{{ study.category }} · {{ study.year }}</p>
+      <h1>{{ study.name }}</h1>
+      <p class="lede">{{ study.summary }}</p>
+    </header>
+
+    <figure class="study-figure">
+      <img src="{{ url_for('static', filename=study.image) }}" alt="{{ study.name }} visual study">
+    </figure>
+
+    <div class="section study-body">
+      <section>
+        <h2>Problem</h2>
+        <p>{{ study.problem }}</p>
+      </section>
+      <section>
+        <h2>Approach</h2>
+        <p>{{ study.approach }}</p>
+      </section>
+      <section class="study-outcome">
+        <h2>Outcome</h2>
+        <p>{{ study.outcome }}</p>
+      </section>
+      <section>
+        <h2>Stack</h2>
+        <ul class="stack-list">
+          {% for item in study.stack %}
+            <li>{{ item }}</li>
+          {% endfor %}
+        </ul>
+      </section>
+      <blockquote class="pull-quote">
+        <p>{{ study.quote }}</p>
+        <footer>— {{ study.attribution }}</footer>
+      </blockquote>
+    </div>
+
+    <nav class="section study-pager" aria-label="More case studies">
+      {% if previous_item %}
+        <a href="{{ url_for('work_detail', slug=previous_item.slug) }}">
+          <span>Previous</span>
+          {{ previous_item.name }}
+        </a>
+      {% else %}
+        <span></span>
+      {% endif %}
+      <a href="{{ url_for('work_index') }}">All work</a>
+      {% if next_item %}
+        <a href="{{ url_for('work_detail', slug=next_item.slug) }}">
+          <span>Next</span>
+          {{ next_item.name }}
+        </a>
+      {% endif %}
+    </nav>
+  </article>
+{% endblock %}

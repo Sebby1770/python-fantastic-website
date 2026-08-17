@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <header class="page-mast">
+    <p class="eyebrow">Studio inbox</p>
+    <h1>Correspondence</h1>
+    <p class="lede">
+      {{ inquiries | length }}
+      {% if inquiries | length == 1 %}brief{% else %}briefs{% endif %}
+      on file. Archive what has been answered. This page is not in the sitemap.
+    </p>
+  </header>
+
+  <section class="section studio-inbox" aria-label="Inquiries">
+    {% if not inquiries %}
+      <p class="empty-note">The tray is empty.</p>
+    {% else %}
+      <ol class="inquiry-list">
+        {% for item in inquiries %}
+          <li class="inquiry {% if item['status'] == 'archived' %}is-archived{% endif %}">
+            <header>
+              <p class="inquiry-meta">
+                <span>{{ item["name"] }}</span>
+                <a href="mailto:{{ item['email'] }}">{{ item["email"] }}</a>
+                <time datetime="{{ item['created_at'] }}">{{ item["created_at"] }}</time>
+                <span class="inquiry-status">{{ item["status"] }}</span>
+              </p>
+              <p class="inquiry-tags">
+                {% if item["project_type"] %}<span>{{ item["project_type"] }}</span>{% endif %}
+                {% if item["budget"] %}<span>{{ item["budget"] }}</span>{% endif %}
+                {% if item["timeline"] %}<span>{{ item["timeline"] }}</span>{% endif %}
+              </p>
+            </header>
+            <p class="inquiry-message">{{ item["message"] }}</p>
+            {% if item["status"] != "archived" %}
+              <form method="post" action="{{ url_for('studio_archive', inquiry_id=item['id']) }}">
+                <input type="hidden" name="token" value="{{ studio_token }}">
+                <button class="button button-secondary" type="submit">Archive</button>
+              </form>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ol>
+    {% endif %}
+  </section>
+{% endblock %}

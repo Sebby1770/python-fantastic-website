@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <header class="page-mast">
+    <p class="eyebrow">Journal</p>
+    <h1>Notes from the desk</h1>
+    <p class="lede">
+      Essays on making websites that can be read, tested, and handed to the next person.
+      Also available as <a class="text-link" href="{{ url_for('journal_feed') }}">RSS</a>.
+    </p>
+  </header>
+
+  <section class="section journal-index" aria-label="Journal essays">
+    <ol class="journal-list">
+      {% for post in posts %}
+        <li>
+          <article class="journal-item">
+            <time datetime="{{ post.iso_date }}">{{ post.date_label }}</time>
+            <h2><a href="{{ url_for('journal_detail', slug=post.slug) }}">{{ post.title }}</a></h2>
+            <p>{{ post.dek }}</p>
+          </article>
+        </li>
+      {% endfor %}
+    </ol>
+  </section>
+{% endblock %}

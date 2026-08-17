@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <header class="page-mast">
+    <p class="eyebrow">Start the conversation</p>
+    <h1>Send a brief, not a deck.</h1>
+    <p class="lede">
+      Name, email, a few optional facts, and the paragraph you would say at a table.
+      The endpoint answers immediately and files the note in the studio inbox.
+    </p>
+  </header>
+
+  <section class="section contact-section contact-page">
+    <div class="contact-copy">
+      <h2>What helps</h2>
+      <p>
+        Audience, offer, proof, and the constraint. Budget and timeline are useful when you have
+        them and ignorable when you do not. If you only have a paragraph, send the paragraph.
+      </p>
+    </div>
+    {% with form_id="contact" %}
+      {% include "_contact_form.html" %}
+    {% endwith %}
+  </section>
+{% endblock %}

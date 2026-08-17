@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <article class="essay">
+    <header class="page-mast">
+      <p class="eyebrow"><time datetime="{{ post.iso_date }}">{{ post.date_label }}</time></p>
+      <h1>{{ post.title }}</h1>
+      <p class="lede">{{ post.dek }}</p>
+    </header>
+    <div class="section prose">
+      {{ post.html }}
+    </div>
+    <p class="section section-more">
+      <a class="text-link" href="{{ url_for('journal_index') }}">All notes</a>
+    </p>
+  </article>
+{% endblock %}

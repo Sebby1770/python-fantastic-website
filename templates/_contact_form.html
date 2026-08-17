@@ -1,0 +1,45 @@
+<form class="contact-form" data-contact-form>
+  <label for="{{ form_id }}-name">
+    Name
+    <input id="{{ form_id }}-name" name="name" type="text" autocomplete="name" required>
+  </label>
+  <label for="{{ form_id }}-email">
+    Email
+    <input id="{{ form_id }}-email" name="email" type="email" autocomplete="email" required>
+  </label>
+  <div class="form-grid">
+    <label for="{{ form_id }}-type">
+      Project type
+      <select id="{{ form_id }}-type" name="project_type">
+        <option value="">Optional</option>
+        {% for option in project_types %}
+          <option value="{{ option }}">{{ option }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label for="{{ form_id }}-budget">
+      Budget
+      <select id="{{ form_id }}-budget" name="budget">
+        <option value="">Optional</option>
+        {% for option in budgets %}
+          <option value="{{ option }}">{{ option }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label for="{{ form_id }}-timeline">
+      Timeline
+      <select id="{{ form_id }}-timeline" name="timeline">
+        <option value="">Optional</option>
+        {% for option in timelines %}
+          <option value="{{ option }}">{{ option }}</option>
+        {% endfor %}
+      </select>
+    </label>
+  </div>
+  <label for="{{ form_id }}-message">
+    Project note
+    <textarea id="{{ form_id }}-message" name="message" rows="5" required></textarea>
+  </label>
+  <button class="button button-primary" type="submit">Send brief</button>
+  <p class="form-status" data-form-status role="status" aria-live="polite"></p>
+</form>

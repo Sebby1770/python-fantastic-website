@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <header class="page-mast">
+    <p class="eyebrow">Folio</p>
+    <h1>Selected work</h1>
+    <p class="lede">
+      Four studies, each with a problem, an approach, and an outcome you can hold up in a meeting.
+      The pictures are ours. The adjectives are earned.
+    </p>
+  </header>
+
+  <section class="section work-index" aria-label="Case studies">
+    <ol class="folio-list">
+      {% for item in work %}
+        <li>
+          <article class="folio-row">
+            <p class="folio-index" aria-hidden="true">{{ item.folio }}</p>
+            <a class="folio-link" href="{{ url_for('work_detail', slug=item.slug) }}">
+              <img src="{{ url_for('static', filename=item.image) }}" alt="">
+              <div>
+                <p class="folio-meta">{{ item.category }} · {{ item.year }}</p>
+                <h2>{{ item.name }}</h2>
+                <p>{{ item.summary }}</p>
+              </div>
+            </a>
+          </article>
+        </li>
+      {% endfor %}
+    </ol>
+  </section>
+{% endblock %}

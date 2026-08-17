@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <header class="page-mast">
+    <p class="eyebrow">Studio note</p>
+    <h1>A small practice with a long memory for paper.</h1>
+    <p class="lede">
+      Asteria Studio designs and builds websites for people who still believe a page can have a point of view.
+      We work in Flask, write the interface ourselves, and leave a repository you can inherit.
+    </p>
+  </header>
+
+  <section class="section about-note">
+    <div class="prose">
+      <p>
+        The studio is named for a navigational star, not a constellation of services.
+        We take on a handful of sites a year: brand platforms, product narratives, editorial catalogs,
+        the occasional venue that deserves better than a Facebook page. If the work is a dashboard
+        that must feel like one, we will say so and point you elsewhere.
+      </p>
+      <p>
+        What we will do is sit with the offer until it can be said in a sentence, then build the
+        system around that sentence. Visual direction is not a layer we pour on at the end. It is
+        how the information stands up.
+      </p>
+    </div>
+  </section>
+
+  <section class="section services-band" aria-labelledby="principles-heading">
+    <div class="section-heading">
+      <p class="eyebrow">Principles</p>
+      <h2 id="principles-heading">How the work behaves when we are not in the room.</h2>
+    </div>
+    <div class="service-list">
+      {% for principle in principles %}
+        <article class="service-row">
+          <h3>{{ principle.title }}</h3>
+          <p>{{ principle.summary }}</p>
+        </article>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="stack-heading">
+    <div class="section-heading">
+      <p class="eyebrow">Stack</p>
+      <h2 id="stack-heading">Tools that stay out of the way.</h2>
+    </div>
+    <ul class="stack-list stack-list-wide">
+      {% for item in stack %}
+        <li>{{ item }}</li>
+      {% endfor %}
+    </ul>
+    <p class="section-more">
+      <a class="text-link" href="{{ url_for('contact_page') }}">Start a brief</a>
+    </p>
+  </section>
+{% endblock %}
