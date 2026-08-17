@@ -1,23 +1,93 @@
 const menuButton = document.querySelector(".menu-toggle");
 const nav = document.querySelector("#site-nav");
-const contactForm = document.querySelector("[data-contact-form]");
-const formStatus = document.querySelector("[data-form-status]");
+const themeButton = document.querySelector("[data-theme-toggle]");
+const themeColor = document.querySelector('meta[name="theme-color"]');
+
+function currentTheme() {
+  return document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
+}
+
+function syncThemeControl(theme) {
+  if (!themeButton) {
+    return;
+  }
+  const next = theme === "dark" ? "light" : "dark";
+  themeButton.setAttribute("aria-pressed", String(theme === "dark"));
+  const label = themeButton.querySelector("[data-theme-label]");
+  if (label) {
+    label.textContent = next === "dark" ? "Use dark theme" : "Use light theme";
+  }
+  if (themeColor) {
+    themeColor.setAttribute("content", theme === "dark" ? "#121614" : "#f6f8f3");
+  }
+}
+
+function setTheme(theme, persist) {
+  document.documentElement.setAttribute("data-theme", theme);
+  if (persist) {
+    try {
+      localStorage.setItem("asteria-theme", theme);
+    } catch (error) {
+      /* private mode */
+    }
+  }
+  syncThemeControl(theme);
+}
+
+syncThemeControl(currentTheme());
+
+if (themeButton) {
+  themeButton.addEventListener("click", () => {
+    setTheme(currentTheme() === "dark" ? "light" : "dark", true);
+  });
+}
+
+try {
+  if (!localStorage.getItem("asteria-theme") && window.matchMedia) {
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const onChange = (event) => setTheme(event.matches ? "dark" : "light", false);
+    if (media.addEventListener) {
+      media.addEventListener("change", onChange);
+    }
+  }
+} catch (error) {
+  /* ignore */
+}
 
 if (menuButton && nav) {
   menuButton.addEventListener("click", () => {
     const isOpen = document.body.classList.toggle("nav-open");
     menuButton.setAttribute("aria-expanded", String(isOpen));
+    const label = menuButton.querySelector(".sr-only");
+    if (label) {
+      label.textContent = isOpen ? "Close navigation" : "Open navigation";
+    }
   });
 
   nav.addEventListener("click", (event) => {
     if (event.target instanceof HTMLAnchorElement) {
       document.body.classList.remove("nav-open");
       menuButton.setAttribute("aria-expanded", "false");
+      const label = menuButton.querySelector(".sr-only");
+      if (label) {
+        label.textContent = "Open navigation";
+      }
     }
   });
 }
 
-if (contactForm && formStatus) {
+const onScroll = () => {
+  document.body.classList.toggle("is-scrolled", window.scrollY > 20);
+};
+onScroll();
+window.addEventListener("scroll", onScroll, { passive: true });
+
+function bindContactForm(contactForm) {
+  const formStatus = contactForm.querySelector("[data-form-status]");
+  if (!formStatus) {
+    return;
+  }
+
   contactForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     formStatus.textContent = "";
@@ -54,3 +124,5 @@ if (contactForm && formStatus) {
     }
   });
 }
+
+document.querySelectorAll("[data-contact-form]").forEach(bindContactForm);

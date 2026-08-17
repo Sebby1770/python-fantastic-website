@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <header class="page-mast">
+    <p class="eyebrow">Search</p>
+    {% if query %}
+      <h1>Results</h1>
+      <p class="lede">
+        {% if hits %}
+          {{ hits | length }}
+          {% if hits | length == 1 %}match{% else %}matches{% endif %}
+          for “{{ query }}”.
+        {% else %}
+          No matches for “{{ query }}”.
+        {% endif %}
+      </p>
+    {% else %}
+      <h1>Look through the folio</h1>
+      <p class="lede">
+        Type a name, a category, or a line from the journal. An empty search stays empty
+        on purpose — it will not dump every document on the desk.
+      </p>
+    {% endif %}
+  </header>
+
+  <section class="section search-section" aria-label="Search the studio">
+    <form class="search-panel" action="{{ url_for('search') }}" method="get" role="search">
+      <label for="search-page-q">Phrase</label>
+      <div class="search-panel-row">
+        <input id="search-page-q" type="search" name="q" value="{{ query }}" placeholder="A name, a category, a phrase">
+        <button class="button button-primary" type="submit">Search</button>
+      </div>
+    </form>
+
+    {% if query and hits %}
+      <ol class="search-list">
+        {% for hit in hits %}
+          <li>
+            <article class="search-hit">
+              <p class="search-kind">{{ hit.kind_label }}</p>
+              <h2>
+                {% if hit.kind == "work" %}
+                  <a href="{{ url_for('work_detail', slug=hit.slug) }}">{{ hit.title }}</a>
+                {% else %}
+                  <a href="{{ url_for('journal_detail', slug=hit.slug) }}">{{ hit.title }}</a>
+                {% endif %}
+              </h2>
+              {% if hit.summary %}
+                <p>{{ hit.summary }}</p>
+              {% endif %}
+            </article>
+          </li>
+        {% endfor %}
+      </ol>
+    {% elif query %}
+      <p class="empty-note">Nothing in the folio or the journal uses that phrase.</p>
+    {% endif %}
+  </section>
+{% endblock %}

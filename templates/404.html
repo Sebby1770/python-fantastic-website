@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <header class="page-mast">
+    <p class="eyebrow">404</p>
+    <h1>This page is not in the folio.</h1>
+    <p class="lede">
+      The sheet you asked for is not here. It may have been renamed, or it may never have been set.
+    </p>
+    <p class="hero-actions">
+      <a class="button button-primary" href="{{ url_for('index') }}">Back to the studio</a>
+      <a class="button button-secondary" href="{{ url_for('work_index') }}">View work</a>
+    </p>
+  </header>
+{% endblock %}

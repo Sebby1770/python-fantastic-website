@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <header class="page-mast">
+    <p class="eyebrow">Folio</p>
+    <h1>Selected work</h1>
+    <p class="lede">
+      Four studies, each with a problem, an approach, and an outcome you can hold up in a meeting.
+      The pictures are ours. The adjectives are earned.
+    </p>
+  </header>
+
+  <section class="section work-index" aria-label="Case studies">
+    <nav class="filter-chips" aria-label="Filter by category">
+      <a href="{{ url_for('work_index') }}"{% if not active_category %} class="is-active"{% endif %}>All</a>
+      {% for category in categories %}
+        <a href="{{ url_for('work_index', category=category) }}"{% if active_category == category %} class="is-active"{% endif %}>{{ category }}</a>
+      {% endfor %}
+    </nav>
+
+    {% if work %}
+      <ol class="folio-list">
+        {% for item in work %}
+          <li>
+            <article class="folio-row">
+              <p class="folio-index" aria-hidden="true">{{ item.folio }}</p>
+              <a class="folio-link" href="{{ url_for('work_detail', slug=item.slug) }}">
+                <img src="{{ url_for('static', filename=item.image) }}" alt="">
+                <div>
+                  <p class="folio-meta">{{ item.category }} · {{ item.year }}</p>
+                  <h2>{{ item.name }}</h2>
+                  <p>{{ item.summary }}</p>
+                </div>
+              </a>
+            </article>
+          </li>
+        {% endfor %}
+      </ol>
+    {% else %}
+      <p class="empty-note">No studies in that category.</p>
+    {% endif %}
+  </section>
+{% endblock %}

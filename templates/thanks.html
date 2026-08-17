@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <header class="page-mast">
+    <p class="eyebrow">Received</p>
+    <h1>The brief is on the desk.</h1>
+    <p class="lede">
+      Thank you. We read every note that arrives and will write back when there is a next step
+      worth taking. Nothing was mailed into a void.
+    </p>
+    <p class="hero-actions">
+      <a class="button button-primary" href="{{ url_for('index') }}">Back to the studio</a>
+      <a class="button button-secondary" href="{{ url_for('work_index') }}">View work</a>
+    </p>
+  </header>
+{% endblock %}

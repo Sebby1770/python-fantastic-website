@@ -151,12 +151,20 @@ def work_image(path: str, seed: int, accent: tuple[int, int, int]) -> None:
     canvas.save(OUT / path)
 
 
+ASSETS = (
+    ("hero.png", hero),
+    ("work-northline.png", lambda: work_image("work-northline.png", 10, (217, 79, 66))),
+    ("work-meridian.png", lambda: work_image("work-meridian.png", 18, (23, 124, 117))),
+    ("work-cobalt.png", lambda: work_image("work-cobalt.png", 26, (197, 138, 34))),
+    ("work-harbor.png", lambda: work_image("work-harbor.png", 34, (54, 103, 177))),
+)
+
+
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
-    hero()
-    work_image("work-northline.png", 10, (217, 79, 66))
-    work_image("work-meridian.png", 18, (23, 124, 117))
-    work_image("work-cobalt.png", 26, (197, 138, 34))
+    for name, builder in ASSETS:
+        if not (OUT / name).exists():
+            builder()
 
 
 if __name__ == "__main__":
