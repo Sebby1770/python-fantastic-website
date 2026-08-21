@@ -28,6 +28,7 @@ __all__ = [
     "contrast_ratio",
     "css_variables",
     "delta_e76",
+    "farthest_pair",
     "hex_to_hsl",
     "json_tokens",
     "lab_query",
@@ -36,9 +37,12 @@ __all__ = [
     "pairing_table",
     "passes_aa",
     "passes_aaa",
+    "passes_ui",
     "recommend_body",
     "scss_map",
     "shade",
+    "sort_by_luminance",
+    "svg_strip",
     "tailwind_theme",
     "tint",
     "type_scale",
@@ -230,6 +234,75 @@ def closest_pair(palette: list[str]) -> dict | None:
     }
 
 
+def farthest_pair(palette: list[str]) -> dict | None:
+    """Return the two farthest swatches by CIE76 ΔE.
+
+    Indexes are ``i < j``. Ties keep the first pair in that scan order.
+    None when the palette has fewer than two colors.
+    """
+    if len(palette) < 2:
+        return None
+    best_i = 0
+    best_j = 1
+    best_delta = delta_e76(palette[0], palette[1])
+    for i in range(len(palette)):
+        for j in range(i + 1, len(palette)):
+            if i == 0 and j == 1:
+                continue
+            delta = delta_e76(palette[i], palette[j])
+            if delta > best_delta:
+                best_delta = delta
+                best_i = i
+                best_j = j
+    return {
+        "a": palette[best_i],
+        "b": palette[best_j],
+        "i": best_i,
+        "j": best_j,
+        "delta_e": best_delta,
+    }
+
+
+def sort_by_luminance(palette: list[str]) -> list[str]:
+    """Return colors lightest-first. Equal luminance keeps original order."""
+    ranked = list(enumerate(palette))
+    ranked.sort(key=lambda item: (-_relative_luminance(item[1]), item[0]))
+    return [color for _, color in ranked]
+
+
+def _svg_num(value: float) -> str:
+    rounded = round(value, 4)
+    if math.isclose(rounded, int(rounded), abs_tol=1e-9):
+        return str(int(rounded))
+    return f"{rounded:.4f}".rstrip("0").rstrip(".")
+
+
+def svg_strip(palette: list[str], width: int = 300, height: int = 48) -> str:
+    """SVG row of swatches. Empty palette yields an empty canvas of the same size."""
+    if width < 1 or height < 1:
+        raise ValueError("width and height must be at least 1")
+    if not palette:
+        return (
+            f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" '
+            f'height="{height}" viewBox="0 0 {width} {height}"></svg>'
+        )
+    count = len(palette)
+    slice_w = width / count
+    rects = []
+    for index, color in enumerate(palette):
+        x = _svg_num(index * slice_w)
+        w = _svg_num(slice_w)
+        rects.append(
+            f'<rect x="{x}" y="0" width="{w}" height="{height}" fill="{color}"/>'
+        )
+    return (
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" '
+        f'height="{height}" viewBox="0 0 {width} {height}">'
+        + "".join(rects)
+        + "</svg>"
+    )
+
+
 def json_tokens(palette: list[str]) -> str:
     """Compact JSON object with ``ink`` and numbered ``studio`` swatches."""
     studio = {str(index): color for index, color in enumerate(palette, start=1)}
@@ -273,6 +346,11 @@ def passes_aaa(hex_a: str, hex_b: str, large: bool = False) -> bool:
     """Return True when the pair meets WCAG AAA (7:1, or 4.5:1 for large text)."""
     threshold = 4.5 if large else 7.0
     return contrast_ratio(hex_a, hex_b) >= threshold
+
+
+def passes_ui(hex_a: str, hex_b: str) -> bool:
+    """Return True when the pair meets WCAG 1.4.11 non-text contrast (3:1)."""
+    return contrast_ratio(hex_a, hex_b) >= 3.0
 
 
 def css_variables(palette: list[str]) -> str:

@@ -8,6 +8,7 @@ from studio import (
     contrast_ratio,
     css_variables,
     delta_e76,
+    farthest_pair,
     hex_to_hsl,
     json_tokens,
     lab_query,
@@ -16,9 +17,12 @@ from studio import (
     pairing_table,
     passes_aa,
     passes_aaa,
+    passes_ui,
     recommend_body,
     scss_map,
     shade,
+    sort_by_luminance,
+    svg_strip,
     tailwind_theme,
     tint,
     type_scale,
@@ -249,3 +253,55 @@ def test_json_tokens_and_tailwind_asteria():
         "} } } }"
     )
     assert json_tokens([]) == '{"ink":"#101418","studio":{}}'
+
+
+def test_passes_ui_three_to_one():
+    assert passes_ui("#ffffff", "#000000") is True
+    assert passes_ui("#888888", "#ffffff") is True
+    assert passes_ui("#cccccc", "#ffffff") is False
+    assert passes_ui("#101418", "#101418") is False
+
+
+def test_farthest_pair_scan_order_and_none():
+    assert farthest_pair([]) is None
+    assert farthest_pair(["#ff0000"]) is None
+    pair = farthest_pair(["#000000", "#111111", "#ffffff"])
+    assert pair["a"] == "#000000"
+    assert pair["b"] == "#ffffff"
+    assert pair["i"] == 0
+    assert pair["j"] == 2
+    assert pair["delta_e"] == approx(delta_e76("#000000", "#ffffff"))
+
+
+def test_farthest_pair_asteria_is_max_delta():
+    palette = palette_from_seed("asteria")
+    pair = farthest_pair(palette)
+    assert pair is not None
+    for i in range(len(palette)):
+        for j in range(i + 1, len(palette)):
+            assert pair["delta_e"] >= delta_e76(palette[i], palette[j]) - 1e-12
+    assert pair["i"] < pair["j"]
+
+
+def test_sort_by_luminance_lightest_first_stable():
+    assert sort_by_luminance(["#000000", "#ffffff", "#808080"]) == ["#ffffff", "#808080", "#000000"]
+    tied = ["#aaaaaa", "#bbbbbb", "#aaaaaa"]
+    assert sort_by_luminance(tied)[0] == "#bbbbbb"
+    same = ["#444444", "#444444"]
+    assert sort_by_luminance(same) == ["#444444", "#444444"]
+    assert sort_by_luminance([]) == []
+
+
+def test_svg_strip_snapshot_and_empty():
+    palette = palette_from_seed("asteria")
+    svg = svg_strip(palette)
+    assert svg.startswith('<svg xmlns="http://www.w3.org/2000/svg" width="300" height="48"')
+    assert 'fill="#66381f"' in svg
+    assert 'x="0"' in svg
+    assert 'x="60"' in svg
+    assert 'width="60"' in svg
+    assert svg_strip([]) == (
+        '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="48" viewBox="0 0 300 48"></svg>'
+    )
+    with raises(ValueError):
+        svg_strip(["#000000"], width=0)

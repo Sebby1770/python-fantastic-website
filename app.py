@@ -15,6 +15,7 @@ from studio import (
     closest_pair,
     contrast_ratio,
     css_variables,
+    farthest_pair,
     hex_to_hsl,
     json_tokens,
     lab_query,
@@ -23,8 +24,11 @@ from studio import (
     pairing_table,
     passes_aa,
     passes_aaa,
+    passes_ui,
     recommend_body,
     scss_map,
+    sort_by_luminance,
+    svg_strip,
     tailwind_theme,
     type_scale,
 )
@@ -76,6 +80,7 @@ class Swatch:
     aa_large: bool
     aaa: bool
     aaa_large: bool
+    ui: bool
     hsl: dict[str, int]
 
 
@@ -313,6 +318,7 @@ def _lab_swatches(seed: str) -> list[Swatch]:
                 aa_large=passes_aa(color, INK, large=True),
                 aaa=passes_aaa(color, INK, large=False),
                 aaa_large=passes_aaa(color, INK, large=True),
+                ui=passes_ui(color, INK),
                 hsl=hex_to_hsl(color),
             )
         )
@@ -361,6 +367,9 @@ def create_app() -> Flask:
             best=best_on_ink(palette),
             body_pair=recommend_body(palette),
             closest=closest_pair(palette),
+            farthest=farthest_pair(palette),
+            luminance=sort_by_luminance(palette),
+            svg=svg_strip(palette),
             mix=mix,
         )
 
@@ -379,6 +388,9 @@ def create_app() -> Flask:
             "tailwind": tailwind_theme(palette),
             "best_on_ink": best_on_ink(palette),
             "closest": closest_pair(palette),
+            "farthest": farthest_pair(palette),
+            "luminance": sort_by_luminance(palette),
+            "svg": svg_strip(palette),
             "query": lab_query(seed, ratio_name),
         }
         parsed_mix = _parse_lab_mix(request.args.get("mix"))

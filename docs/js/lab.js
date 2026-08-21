@@ -1,4 +1,4 @@
-/* Mirrors studio.py: SHA-256 seed, HSL palette, WCAG contrast, mix/shade/tint, CIE76, pairings, CSS/SCSS/JSON/Tailwind tokens, type scale. */
+/* Mirrors studio.py: SHA-256 seed, HSL palette, WCAG contrast, mix/shade/tint, CIE76, pairings, CSS/SCSS/JSON/Tailwind/SVG tokens, type scale. */
 
 const XYZ_D65 = [0.95047, 1, 1.08883];
 const LAB_DELTA = 6 / 29;
@@ -124,6 +124,10 @@ function passesAaa(hexA, hexB, large = false) {
   return contrastRatio(hexA, hexB) >= (large ? 4.5 : 7);
 }
 
+function passesUi(hexA, hexB) {
+  return contrastRatio(hexA, hexB) >= 3;
+}
+
 function cssVariables(palette) {
   const tokens = palette.map((color, index) => `--studio-${index + 1}: ${color};`);
   tokens.push(`--studio-ink: ${INK};`);
@@ -211,6 +215,52 @@ function closestPair(palette) {
     }
   }
   return { a: palette[bestI], b: palette[bestJ], i: bestI, j: bestJ, delta_e: bestDelta };
+}
+
+function farthestPair(palette) {
+  if (palette.length < 2) return null;
+  let bestI = 0;
+  let bestJ = 1;
+  let bestDelta = deltaE76(palette[0], palette[1]);
+  for (let i = 0; i < palette.length; i += 1) {
+    for (let j = i + 1; j < palette.length; j += 1) {
+      if (i === 0 && j === 1) continue;
+      const delta = deltaE76(palette[i], palette[j]);
+      if (delta > bestDelta) {
+        bestDelta = delta;
+        bestI = i;
+        bestJ = j;
+      }
+    }
+  }
+  return { a: palette[bestI], b: palette[bestJ], i: bestI, j: bestJ, delta_e: bestDelta };
+}
+
+function sortByLuminance(palette) {
+  return palette
+    .map((color, index) => ({ color, index, lum: relativeLuminance(color) }))
+    .sort((a, b) => b.lum - a.lum || a.index - b.index)
+    .map((row) => row.color);
+}
+
+function svgNum(value) {
+  const rounded = Math.round(value * 10000) / 10000;
+  if (Math.abs(rounded - Math.round(rounded)) < 1e-9) return String(Math.round(rounded));
+  return String(rounded);
+}
+
+function svgStrip(palette, width = 300, height = 48) {
+  if (width < 1 || height < 1) {
+    throw new Error("width and height must be at least 1");
+  }
+  if (!palette.length) {
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"></svg>`;
+  }
+  const sliceW = width / palette.length;
+  const rects = palette.map((color, index) => {
+    return `<rect x="${svgNum(index * sliceW)}" y="0" width="${svgNum(sliceW)}" height="${height}" fill="${color}"/>`;
+  });
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${rects.join("")}</svg>`;
 }
 
 function jsonTokens(palette) {
@@ -319,6 +369,7 @@ function renderPalette(colors) {
       "AAA large pass",
       "AAA large fail",
     );
+    setBadge(card.querySelector("[data-swatch-ui]"), passesUi(hex, INK), "UI pass", "UI fail");
   });
 }
 
@@ -360,21 +411,20 @@ function renderTailwind(theme) {
   if (node) node.textContent = theme;
 }
 
-function renderClosestPair(pair) {
-  const root = document.querySelector("[data-closest-pair]");
+function renderPairCallout(root, pair, prefix) {
   if (!root) return;
   if (!pair) {
     root.hidden = true;
     return;
   }
   root.hidden = false;
-  const aChip = root.querySelector("[data-closest-a-chip]");
-  const bChip = root.querySelector("[data-closest-b-chip]");
-  const aNode = root.querySelector("[data-closest-a]");
-  const bNode = root.querySelector("[data-closest-b]");
-  const deltaNode = root.querySelector("[data-closest-delta]");
-  const iNode = root.querySelector("[data-closest-i]");
-  const jNode = root.querySelector("[data-closest-j]");
+  const aChip = root.querySelector(`[data-${prefix}-a-chip]`);
+  const bChip = root.querySelector(`[data-${prefix}-b-chip]`);
+  const aNode = root.querySelector(`[data-${prefix}-a]`);
+  const bNode = root.querySelector(`[data-${prefix}-b]`);
+  const deltaNode = root.querySelector(`[data-${prefix}-delta]`);
+  const iNode = root.querySelector(`[data-${prefix}-i]`);
+  const jNode = root.querySelector(`[data-${prefix}-j]`);
   if (aChip) aChip.style.background = pair.a;
   if (bChip) bChip.style.background = pair.b;
   if (aNode) aNode.textContent = pair.a;
@@ -382,6 +432,32 @@ function renderClosestPair(pair) {
   if (deltaNode) deltaNode.textContent = pair.delta_e.toFixed(1);
   if (iNode) iNode.textContent = String(pair.i);
   if (jNode) jNode.textContent = String(pair.j);
+}
+
+function renderClosestPair(pair) {
+  renderPairCallout(document.querySelector("[data-closest-pair]"), pair, "closest");
+}
+
+function renderFarthestPair(pair) {
+  renderPairCallout(document.querySelector("[data-farthest-pair]"), pair, "farthest");
+}
+
+function renderLuminance(colors) {
+  const row = document.querySelector("[data-luminance-row]");
+  if (!row) return;
+  row.innerHTML = colors
+    .map(
+      (color) =>
+        `<div class="luminance-chip"><div class="lab-callout-swatch" style="background: ${color}"></div><p>${color}</p></div>`,
+    )
+    .join("");
+}
+
+function renderSvg(svg) {
+  const preview = document.querySelector("[data-svg-preview]");
+  const source = document.querySelector("[data-svg-strip]");
+  if (preview) preview.innerHTML = svg;
+  if (source) source.textContent = svg;
 }
 
 function renderBestOnInk(best) {
@@ -486,7 +562,10 @@ async function compose(seed, ratioName) {
   renderScss(scssMap(colors));
   renderJsonTokens(jsonTokens(colors));
   renderTailwind(tailwindTheme(colors));
+  renderSvg(svgStrip(colors));
   renderClosestPair(closestPair(colors));
+  renderFarthestPair(farthestPair(colors));
+  renderLuminance(sortByLuminance(colors));
   renderMixOptions(colors);
   renderMix(colors);
   renderTypeScale(typeScale(16, TYPE_RATIOS[ratioKey], 6), ratioKey);
@@ -516,6 +595,7 @@ function initCopyButtons() {
   bindCopyButton(document.querySelector("[data-copy-scss]"), document.querySelector("[data-scss-map]"));
   bindCopyButton(document.querySelector("[data-copy-json]"), document.querySelector("[data-json-tokens]"));
   bindCopyButton(document.querySelector("[data-copy-tailwind]"), document.querySelector("[data-tailwind-theme]"));
+  bindCopyButton(document.querySelector("[data-copy-svg]"), document.querySelector("[data-svg-strip]"));
 }
 
 function initCopyLabLink() {

@@ -9,10 +9,10 @@
           <p class="eyebrow">Studio Lab</p>
           <h1>Color and type, from a seed.</h1>
           <p class="hero-copy">
-            Hash a phrase into five studio colors, mix two swatches, measure AA and AAA against ink
-            <span data-ink>{{ ink }}</span>, call out the closest CIE76 pair and the best on ink,
-            recommend a body pair, export CSS, SCSS, JSON, and Tailwind tokens, and read a modular
-            scale from 16px.
+            Hash a phrase into five studio colors, mix two swatches, measure AA, AAA, and UI (3:1)
+            against ink <span data-ink>{{ ink }}</span>, call out the closest and farthest CIE76
+            pairs and the best on ink, sort by luminance, recommend a body pair, export CSS, SCSS,
+            JSON, Tailwind, and SVG, and read a modular scale from 16px.
           </p>
         </div>
       </section>
@@ -62,6 +62,9 @@
                       </span>
                       <span class="{% if swatch.aaa_large %}aa-pass{% else %}aa-fail{% endif %}" data-swatch-aaa-large>
                         {% if swatch.aaa_large %}AAA large pass{% else %}AAA large fail{% endif %}
+                      </span>
+                      <span class="{% if swatch.ui %}aa-pass{% else %}aa-fail{% endif %}" data-swatch-ui>
+                        {% if swatch.ui %}UI pass{% else %}UI fail{% endif %}
                       </span>
                     </div>
                   </div>
@@ -132,6 +135,20 @@
                 <h3>ΔE <span data-closest-delta>{% if closest %}{{ "%.1f"|format(closest.delta_e) }}{% endif %}</span></h3>
                 <p class="closest-index">swatches <span data-closest-i>{% if closest %}{{ closest.i }}{% endif %}</span> and <span data-closest-j>{% if closest %}{{ closest.j }}{% endif %}</span></p>
               </article>
+              <article class="lab-callout" data-farthest-pair{% if not farthest %} hidden{% endif %}>
+                <p class="eyebrow">Farthest pair</p>
+                <div class="closest-chips">
+                  <div class="lab-callout-swatch" data-farthest-a-chip{% if farthest %} style="background: {{ farthest.a }}"{% endif %}></div>
+                  <div class="lab-callout-swatch" data-farthest-b-chip{% if farthest %} style="background: {{ farthest.b }}"{% endif %}></div>
+                </div>
+                <p>
+                  <span data-farthest-a>{% if farthest %}{{ farthest.a }}{% endif %}</span>
+                  ·
+                  <span data-farthest-b>{% if farthest %}{{ farthest.b }}{% endif %}</span>
+                </p>
+                <h3>ΔE <span data-farthest-delta>{% if farthest %}{{ "%.1f"|format(farthest.delta_e) }}{% endif %}</span></h3>
+                <p class="closest-index">swatches <span data-farthest-i>{% if farthest %}{{ farthest.i }}{% endif %}</span> and <span data-farthest-j>{% if farthest %}{{ farthest.j }}{% endif %}</span></p>
+              </article>
               <article class="lab-callout" data-body-pair{% if not body_pair %} hidden{% endif %}>
                 <p class="eyebrow">Body pair</p>
                 <div
@@ -157,6 +174,21 @@
                 </div>
               </article>
             </div>
+
+            <article class="luminance-block" data-luminance>
+              <div class="section-heading">
+                <p class="eyebrow">Luminance</p>
+                <h2>Lightest to darkest.</h2>
+              </div>
+              <div class="luminance-row" data-luminance-row>
+                {% for color in luminance %}
+                  <div class="luminance-chip">
+                    <div class="lab-callout-swatch" style="background: {{ color }}"></div>
+                    <p>{{ color }}</p>
+                  </div>
+                {% endfor %}
+              </div>
+            </article>
 
             <div class="pairing-block">
               <div class="section-heading">
@@ -242,6 +274,18 @@
               <button class="button button-paper" type="button" data-copy-tailwind>Copy</button>
             </div>
             <pre data-tailwind-theme>{{ tailwind|safe }}</pre>
+          </div>
+
+          <div class="css-export" data-svg-export>
+            <div class="css-export-header">
+              <div class="section-heading">
+                <p class="eyebrow">Tokens</p>
+                <h2>SVG strip.</h2>
+              </div>
+              <button class="button button-paper" type="button" data-copy-svg>Copy</button>
+            </div>
+            <div class="svg-preview" data-svg-preview>{{ svg|safe }}</div>
+            <pre data-svg-strip>{{ svg }}</pre>
           </div>
         </div>
 

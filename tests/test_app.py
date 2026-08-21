@@ -8,11 +8,14 @@ from studio import (
     closest_pair,
     contrast_ratio,
     css_variables,
+    farthest_pair,
     json_tokens,
     lab_query,
     mix_hex,
     palette_from_seed,
     scss_map,
+    sort_by_luminance,
+    svg_strip,
     tailwind_theme,
     type_scale,
 )
@@ -145,8 +148,13 @@ def test_lab_renders_palette_and_type_scale():
     assert "JSON tokens" in html
     assert "Tailwind theme" in html
     assert "Closest pair" in html
+    assert "Farthest pair" in html
+    assert "Lightest to darkest" in html
+    assert "SVG strip" in html
+    assert "UI pass" in html or "UI fail" in html
     assert json_tokens(palette) in html
     assert tailwind_theme(palette) in html
+    assert svg_strip(palette) in html
 
 
 def test_lab_json_returns_palette_tokens():
@@ -178,6 +186,10 @@ def test_lab_json_returns_palette_tokens():
     assert payload["closest"]["i"] == closest_pair(palette)["i"]
     assert payload["closest"]["j"] == closest_pair(palette)["j"]
     assert payload["closest"]["delta_e"] == approx(closest_pair(palette)["delta_e"])
+    assert payload["farthest"]["a"] == farthest_pair(palette)["a"]
+    assert payload["farthest"]["b"] == farthest_pair(palette)["b"]
+    assert payload["luminance"] == sort_by_luminance(palette)
+    assert payload["svg"] == svg_strip(palette)
     assert set(payload) == {
         "seed",
         "palette",
@@ -188,6 +200,9 @@ def test_lab_json_returns_palette_tokens():
         "tailwind",
         "best_on_ink",
         "closest",
+        "farthest",
+        "luminance",
+        "svg",
         "query",
     }
     assert defaulted.status_code == 200

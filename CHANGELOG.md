@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.5.0] - 2026-08-21
+
+### Added
+
+- `farthest_pair`, `sort_by_luminance`, `svg_strip`, and `passes_ui` (WCAG 1.4.11, 3:1) in `studio.py`
+- Studio Lab UI contrast badges, farthest-pair callout, luminance order row, and copyable SVG strip
+- `GET /lab.json` includes `farthest`, `luminance`, and `svg`
+
+### Changed
+
+- README and project metadata at 2.5.0
+
 ## [2.4.0] - 2026-08-21
 
 ### Added
