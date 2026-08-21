@@ -1,9 +1,17 @@
 from __future__ import annotations
 
+from collections import defaultdict, deque
 from dataclasses import dataclass
 from email.utils import parseaddr
+from threading import Lock
+from time import monotonic
 
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, abort, jsonify, render_template, request
+
+from studio import INK, contrast_ratio, palette_from_seed, passes_aa, type_scale
+
+CONTACT_RATE_LIMIT = 8
+CONTACT_RATE_WINDOW = 600
 
 
 @dataclass(frozen=True)
@@ -15,9 +23,17 @@ class Stat:
 @dataclass(frozen=True)
 class WorkItem:
     name: str
+    slug: str
     category: str
     summary: str
     image: str
+    year: str
+    client: str
+    role: str
+    challenge: str
+    approach: str
+    outcome: str
+    highlights: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -33,6 +49,34 @@ class ProcessStep:
     summary: str
 
 
+@dataclass(frozen=True)
+class Swatch:
+    hex: str
+    ratio: float
+    aa: bool
+    aa_large: bool
+
+
+class RateLimiter:
+    def __init__(self, max_hits: int, window_seconds: float) -> None:
+        self.max_hits = max_hits
+        self.window_seconds = window_seconds
+        self._hits: dict[str, deque[float]] = defaultdict(deque)
+        self._lock = Lock()
+
+    def allow(self, key: str) -> bool:
+        now = monotonic()
+        cutoff = now - self.window_seconds
+        with self._lock:
+            bucket = self._hits[key]
+            while bucket and bucket[0] <= cutoff:
+                bucket.popleft()
+            if len(bucket) >= self.max_hits:
+                return False
+            bucket.append(now)
+            return True
+
+
 STATS = [
     Stat("47", "launches shipped"),
     Stat("1.2s", "typical first load"),
@@ -42,21 +86,59 @@ STATS = [
 WORK = [
     WorkItem(
         "Northline",
+        "northline",
         "Brand platform",
         "A high-trust launch system for a technical consulting firm.",
         "img/work-northline.png",
+        "2025",
+        "Northline Advisory",
+        "Brand, site, and launch",
+        "The firm needed a public presence as precise as the work behind closed doors. "
+        "The previous site buried the offer in generic language, slow templates, and a "
+        "contact path that asked for too much too soon.",
+        "We shaped a brand platform in Flask: a tight visual system, a high-trust narrative, "
+        "and pages that load as quickly as the argument they make. Generated studies keep the "
+        "repository portable without depending on a separate asset pipeline.",
+        "A launch system that presents Northline as a serious partner—clear services, selected "
+        "work, and a direct path into conversation.",
+        ("High-trust brand language", "Sub-2s first load target", "One system for brand and site"),
     ),
     WorkItem(
         "Meridian",
+        "meridian",
         "Product website",
         "A conversion-focused site with clear paths for buyers and partners.",
         "img/work-meridian.png",
+        "2025",
+        "Meridian",
+        "Product site and conversion",
+        "Buyers and partners were landing in the same funnel. The product story was strong, "
+        "but the next step was not, and comparison pages repeated the same pitch instead of "
+        "routing intent.",
+        "We rebuilt the information architecture around two audiences, with conversion paths "
+        "that stay specific: proof for buyers, context for partners, and a contact brief that "
+        "arrives ready for the next conversation.",
+        "A product website that routes intent without diluting the story, and a visual system "
+        "that can grow with the catalogue.",
+        ("Split paths for buyers and partners", "Proof before pitch", "Contact that ships a brief"),
     ),
     WorkItem(
         "Cobalt Room",
+        "cobalt-room",
         "Experience design",
         "A cinematic editorial presence for an intimate events venue.",
         "img/work-cobalt.png",
+        "2024",
+        "Cobalt Room",
+        "Editorial site and atmosphere",
+        "The room had atmosphere in person and a brochure online. Night photography fought a "
+        "generic template, and the booking path felt like an inquiry form rather than an invitation.",
+        "We treated the site as editorial experience design: cinematic pacing, a restrained "
+        "palette, and copy that sounds like the room. The Flask build stays quiet so the images "
+        "and type can carry the evening.",
+        "A presence that feels like the venue—intimate, considered, and ready to book—without "
+        "losing the operational clarity a small team needs.",
+        ("Editorial pacing", "Cinematic stills in a quiet layout", "A booking path with manners"),
     ),
 ]
 
@@ -94,8 +176,35 @@ PROCESS = [
 ]
 
 
+def _client_ip() -> str:
+    forwarded = request.headers.get("X-Forwarded-For", "")
+    if forwarded:
+        return forwarded.split(",")[0].strip() or (request.remote_addr or "unknown")
+    return request.remote_addr or "unknown"
+
+
+def _lab_swatches(seed: str) -> list[Swatch]:
+    swatches: list[Swatch] = []
+    for color in palette_from_seed(seed):
+        ratio = contrast_ratio(color, INK)
+        swatches.append(
+            Swatch(
+                hex=color,
+                ratio=ratio,
+                aa=passes_aa(color, INK, large=False),
+                aa_large=passes_aa(color, INK, large=True),
+            )
+        )
+    return swatches
+
+
 def create_app() -> Flask:
     app = Flask(__name__)
+    limiter = RateLimiter(CONTACT_RATE_LIMIT, CONTACT_RATE_WINDOW)
+
+    @app.context_processor
+    def inject_nav() -> dict[str, object]:
+        return {"nav_work": WORK}
 
     @app.get("/")
     def index():
@@ -107,12 +216,42 @@ def create_app() -> Flask:
             process=PROCESS,
         )
 
+    @app.get("/lab")
+    def lab():
+        seed = (request.args.get("seed") or "asteria").strip() or "asteria"
+        return render_template(
+            "lab.html",
+            seed=seed,
+            ink=INK,
+            swatches=_lab_swatches(seed),
+            scale=type_scale(),
+        )
+
+    @app.get("/work/<slug>")
+    def work_detail(slug: str):
+        item = next((entry for entry in WORK if entry.slug == slug), None)
+        if item is None:
+            abort(404)
+        related = [entry for entry in WORK if entry.slug != slug]
+        return render_template("work.html", item=item, related=related)
+
     @app.get("/health")
     def health():
         return jsonify({"ok": True, "service": "asteria-studio"})
 
     @app.post("/contact")
     def contact():
+        if not limiter.allow(_client_ip()):
+            return (
+                jsonify(
+                    {
+                        "ok": False,
+                        "message": "Too many briefs from this network. Please wait a few minutes and try again.",
+                    }
+                ),
+                429,
+            )
+
         payload = request.get_json(silent=True) or request.form
         name = str(payload.get("name", "")).strip()
         email = str(payload.get("email", "")).strip()
@@ -140,6 +279,10 @@ def create_app() -> Flask:
                 "message": f"Thanks, {first_name}. Your brief is ready for the next conversation.",
             }
         )
+
+    @app.errorhandler(404)
+    def not_found(_error):
+        return render_template("404.html"), 404
 
     return app
 

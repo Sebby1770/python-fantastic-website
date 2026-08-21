@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Compose a deterministic five-color palette from a seed, check WCAG contrast against ink, and preview a major-third type scale.">
+    <title>Studio Lab — Asteria Studio</title>
+    <link rel="icon" href="../img/favicon.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/styles.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="../index.html" aria-label="Asteria Studio home">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span>Asteria Studio</span>
+      </a>
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav">
+        <span class="sr-only">Open navigation</span>
+        <span aria-hidden="true"></span>
+        <span aria-hidden="true"></span>
+        <span aria-hidden="true"></span>
+      </button>
+      <nav class="site-nav" id="site-nav" aria-label="Primary navigation">
+        <a href="../index.html#work">Work</a>
+        
+          <a class="nav-case" href="../work/northline/">Northline</a>
+        
+          <a class="nav-case" href="../work/meridian/">Meridian</a>
+        
+          <a class="nav-case" href="../work/cobalt-room/">Cobalt Room</a>
+        
+        <a href="../lab/" aria-current="page">Lab</a>
+        <a href="../index.html#services">Services</a>
+        <a href="../index.html#process">Process</a>
+        <a class="nav-action" href="../index.html#contact">Start</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      
+      <section class="page-hero" aria-label="Studio Lab">
+        <div class="hero-content">
+          <p class="eyebrow">Studio Lab</p>
+          <h1>Color and type, from a seed.</h1>
+          <p class="hero-copy">
+            Hash a phrase into five studio colors, measure contrast against ink
+            <span data-ink>#101418</span>, and read a major-third scale from 16px.
+          </p>
+        </div>
+      </section>
+
+      <section class="section lab-section" data-lab>
+        <div class="lab-layout">
+          <form class="contact-form lab-form" method="get" action="../lab/" data-lab-form>
+            <label>
+              Seed
+              <input name="seed" type="text" value="asteria" autocomplete="off" data-lab-seed>
+            </label>
+            <button class="button button-primary" type="submit">Compose palette</button>
+            <p class="form-status">SHA-256 of the seed. Same phrase, same five colors.</p>
+          </form>
+
+          <div>
+            <div class="section-heading">
+              <p class="eyebrow">Palette</p>
+              <h2>Swatches against ink.</h2>
+            </div>
+            <div class="swatch-grid" data-swatch-grid>
+              
+                <article class="swatch" data-swatch>
+                  <div class="swatch-chip" data-swatch-chip style="background: #66381f"></div>
+                  <div class="swatch-body">
+                    <p data-swatch-hex>#66381f</p>
+                    <h3><span data-swatch-ratio>1.89</span>:1 vs ink</h3>
+                    <span class="aa-fail" data-swatch-aa>
+                      AA fail
+                    </span>
+                    <span class="aa-fail" data-swatch-aa-large>
+                      AA large fail
+                    </span>
+                  </div>
+                </article>
+              
+                <article class="swatch" data-swatch>
+                  <div class="swatch-chip" data-swatch-chip style="background: #a76538"></div>
+                  <div class="swatch-body">
+                    <p data-swatch-hex>#a76538</p>
+                    <h3><span data-swatch-ratio>4.02</span>:1 vs ink</h3>
+                    <span class="aa-fail" data-swatch-aa>
+                      AA fail
+                    </span>
+                    <span class="aa-pass" data-swatch-aa-large>
+                      AA large pass
+                    </span>
+                  </div>
+                </article>
+              
+                <article class="swatch" data-swatch>
+                  <div class="swatch-chip" data-swatch-chip style="background: #a9be5c"></div>
+                  <div class="swatch-body">
+                    <p data-swatch-hex>#a9be5c</p>
+                    <h3><span data-swatch-ratio>8.99</span>:1 vs ink</h3>
+                    <span class="aa-pass" data-swatch-aa>
+                      AA pass
+                    </span>
+                    <span class="aa-pass" data-swatch-aa-large>
+                      AA large pass
+                    </span>
+                  </div>
+                </article>
+              
+                <article class="swatch" data-swatch>
+                  <div class="swatch-chip" data-swatch-chip style="background: #83d1db"></div>
+                  <div class="swatch-body">
+                    <p data-swatch-hex>#83d1db</p>
+                    <h3><span data-swatch-ratio>10.67</span>:1 vs ink</h3>
+                    <span class="aa-pass" data-swatch-aa>
+                      AA pass
+                    </span>
+                    <span class="aa-pass" data-swatch-aa-large>
+                      AA large pass
+                    </span>
+                  </div>
+                </article>
+              
+                <article class="swatch" data-swatch>
+                  <div class="swatch-chip" data-swatch-chip style="background: #a4b0d9"></div>
+                  <div class="swatch-body">
+                    <p data-swatch-hex>#a4b0d9</p>
+                    <h3><span data-swatch-ratio>8.62</span>:1 vs ink</h3>
+                    <span class="aa-pass" data-swatch-aa>
+                      AA pass
+                    </span>
+                    <span class="aa-pass" data-swatch-aa-large>
+                      AA large pass
+                    </span>
+                  </div>
+                </article>
+              
+            </div>
+          </div>
+        </div>
+
+        <div class="section-heading type-heading">
+          <p class="eyebrow">Type scale</p>
+          <h2>Major third from 16px.</h2>
+        </div>
+        <div class="type-scale" data-type-scale>
+          
+            <div class="type-row">
+              <span>16px</span>
+              <p style="font-size: 16.0px">Asteria Studio</p>
+            </div>
+          
+            <div class="type-row">
+              <span>20px</span>
+              <p style="font-size: 20.0px">Asteria Studio</p>
+            </div>
+          
+            <div class="type-row">
+              <span>25px</span>
+              <p style="font-size: 25.0px">Asteria Studio</p>
+            </div>
+          
+            <div class="type-row">
+              <span>31.25px</span>
+              <p style="font-size: 31.25px">Asteria Studio</p>
+            </div>
+          
+            <div class="type-row">
+              <span>39.06px</span>
+              <p style="font-size: 39.06px">Asteria Studio</p>
+            </div>
+          
+            <div class="type-row">
+              <span>48.83px</span>
+              <p style="font-size: 48.83px">Asteria Studio</p>
+            </div>
+          
+        </div>
+      </section>
+
+    </main>
+
+    <footer class="site-footer">
+      <span>Asteria Studio</span>
+      <nav class="footer-nav" aria-label="Footer">
+        <a href="../lab/">Lab</a>
+        
+          <a href="../work/northline/">Northline</a>
+        
+          <a href="../work/meridian/">Meridian</a>
+        
+          <a href="../work/cobalt-room/">Cobalt Room</a>
+        
+        <a href="#top">Back to top</a>
+      </nav>
+    </footer>
+
+    <script src="../js/main.js" defer></script>
+    
+    <script src="../js/lab.js" defer></script>
+
+  </body>
+</html>

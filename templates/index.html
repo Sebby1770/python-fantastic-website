@@ -1,37 +1,6 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta
-      name="description"
-      content="Asteria Studio is a polished Python-powered website built with Flask, responsive design, and local visual assets."
-    >
-    <title>Asteria Studio</title>
-    <link rel="icon" href="{{ url_for('static', filename='img/favicon.svg') }}" type="image/svg+xml">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-  </head>
-  <body>
-    <header class="site-header">
-      <a class="brand" href="#top" aria-label="Asteria Studio home">
-        <span class="brand-mark" aria-hidden="true"></span>
-        <span>Asteria Studio</span>
-      </a>
-      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav">
-        <span class="sr-only">Open navigation</span>
-        <span aria-hidden="true"></span>
-        <span aria-hidden="true"></span>
-        <span aria-hidden="true"></span>
-      </button>
-      <nav class="site-nav" id="site-nav" aria-label="Primary navigation">
-        <a href="#work">Work</a>
-        <a href="#services">Services</a>
-        <a href="#process">Process</a>
-        <a class="nav-action" href="#contact">Start</a>
-      </nav>
-    </header>
+{% extends "base.html" %}
 
-    <main id="top">
+{% block content %}
       <section class="hero" aria-label="Asteria Studio introduction">
         <div class="hero-content">
           <p class="eyebrow">Python powered digital studio</p>
@@ -63,14 +32,14 @@
         </div>
         <div class="work-grid">
           {% for item in work %}
-            <article class="work-card">
+            <a class="work-card" href="{{ url_for('work_detail', slug=item.slug) }}">
               <img src="{{ url_for('static', filename=item.image) }}" alt="{{ item.name }} visual study">
               <div class="work-card-body">
                 <p>{{ item.category }}</p>
                 <h3>{{ item.name }}</h3>
                 <span>{{ item.summary }}</span>
               </div>
-            </article>
+            </a>
           {% endfor %}
         </div>
       </section>
@@ -131,13 +100,4 @@
           <p class="form-status" data-form-status role="status" aria-live="polite"></p>
         </form>
       </section>
-    </main>
-
-    <footer class="site-footer">
-      <span>Asteria Studio</span>
-      <a href="#top">Back to top</a>
-    </footer>
-
-    <script src="{{ url_for('static', filename='js/main.js') }}" defer></script>
-  </body>
-</html>
+{% endblock %}

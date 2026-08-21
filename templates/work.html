@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}{{ item.name }} — Asteria Studio{% endblock %}
+{% block description %}{{ item.summary }}{% endblock %}
+
+{% block content %}
+      <section
+        class="page-hero page-hero-work"
+        style="--page-hero-image: url('{{ url_for('static', filename=item.image) }}')"
+        aria-label="{{ item.name }} case study"
+      >
+        <div class="hero-content">
+          <p class="eyebrow">{{ item.category }}</p>
+          <h1>{{ item.name }}</h1>
+          <p class="hero-copy">{{ item.summary }}</p>
+        </div>
+      </section>
+
+      <section class="section case-section">
+        <div class="case-layout">
+          <div class="case-copy">
+            <div class="section-heading">
+              <p class="eyebrow">Challenge</p>
+              <h2>The brief we walked into.</h2>
+            </div>
+            <p>{{ item.challenge }}</p>
+            <div class="section-heading">
+              <p class="eyebrow">Approach</p>
+              <h2>How the system came together.</h2>
+            </div>
+            <p>{{ item.approach }}</p>
+            <div class="section-heading">
+              <p class="eyebrow">Outcome</p>
+              <h2>What launched.</h2>
+            </div>
+            <p>{{ item.outcome }}</p>
+          </div>
+          <aside class="case-aside">
+            <dl class="meta-list">
+              <div>
+                <dt>Year</dt>
+                <dd>{{ item.year }}</dd>
+              </div>
+              <div>
+                <dt>Client</dt>
+                <dd>{{ item.client }}</dd>
+              </div>
+              <div>
+                <dt>Role</dt>
+                <dd>{{ item.role }}</dd>
+              </div>
+            </dl>
+            <ul class="highlight-list">
+              {% for line in item.highlights %}
+                <li>{{ line }}</li>
+              {% endfor %}
+            </ul>
+          </aside>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-heading">
+          <p class="eyebrow">More work</p>
+          <h2>Other launches in the studio.</h2>
+        </div>
+        <div class="work-grid">
+          {% for entry in related %}
+            <a class="work-card" href="{{ url_for('work_detail', slug=entry.slug) }}">
+              <img src="{{ url_for('static', filename=entry.image) }}" alt="{{ entry.name }} visual study">
+              <div class="work-card-body">
+                <p>{{ entry.category }}</p>
+                <h3>{{ entry.name }}</h3>
+                <span>{{ entry.summary }}</span>
+              </div>
+            </a>
+          {% endfor %}
+        </div>
+      </section>
+{% endblock %}

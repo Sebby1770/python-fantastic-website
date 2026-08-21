@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="{% block description %}Asteria Studio is a polished Python-powered website built with Flask, responsive design, and local visual assets.{% endblock %}">
+    <title>{% block title %}Asteria Studio{% endblock %}</title>
+    <link rel="icon" href="{{ url_for('static', filename='img/favicon.svg') }}" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="{{ url_for('index') }}" aria-label="Asteria Studio home">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span>Asteria Studio</span>
+      </a>
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav">
+        <span class="sr-only">Open navigation</span>
+        <span aria-hidden="true"></span>
+        <span aria-hidden="true"></span>
+        <span aria-hidden="true"></span>
+      </button>
+      <nav class="site-nav" id="site-nav" aria-label="Primary navigation">
+        <a href="{{ url_for('index') }}#work"{% if request.path == '/' %} aria-current="page"{% endif %}>Work</a>
+        {% for item in nav_work %}
+          <a class="nav-case" href="{{ url_for('work_detail', slug=item.slug) }}"{% if request.path == '/work/' + item.slug %} aria-current="page"{% endif %}>{{ item.name }}</a>
+        {% endfor %}
+        <a href="{{ url_for('lab') }}"{% if request.path == '/lab' %} aria-current="page"{% endif %}>Lab</a>
+        <a href="{{ url_for('index') }}#services">Services</a>
+        <a href="{{ url_for('index') }}#process">Process</a>
+        <a class="nav-action" href="{{ url_for('index') }}#contact">Start</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      {% block content %}{% endblock %}
+    </main>
+
+    <footer class="site-footer">
+      <span>Asteria Studio</span>
+      <nav class="footer-nav" aria-label="Footer">
+        <a href="{{ url_for('lab') }}">Lab</a>
+        {% for item in nav_work %}
+          <a href="{{ url_for('work_detail', slug=item.slug) }}">{{ item.name }}</a>
+        {% endfor %}
+        <a href="#top">Back to top</a>
+      </nav>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}" defer></script>
+    {% block scripts %}{% endblock %}
+  </body>
+</html>

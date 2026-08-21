@@ -1,3 +1,11 @@
+[project]
+name = "asteria-studio"
+version = "2.0.0"
+description = "Asteria Studio — a Flask marketing site with a design lab and case studies."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]

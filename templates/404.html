@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}Page not found — Asteria Studio{% endblock %}
+{% block description %}The page you asked for is not in the Asteria Studio site.{% endblock %}
+
+{% block content %}
+      <section class="page-hero" aria-label="Page not found">
+        <div class="hero-content">
+          <p class="eyebrow">404</p>
+          <h1>This page is not in the system.</h1>
+          <p class="hero-copy">
+            The route is unknown. Return home, open Studio Lab, or read a selected case study.
+          </p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="{{ url_for('index') }}">Back to Asteria</a>
+            <a class="button button-secondary" href="{{ url_for('lab') }}">Open the lab</a>
+          </div>
+        </div>
+      </section>
+{% endblock %}

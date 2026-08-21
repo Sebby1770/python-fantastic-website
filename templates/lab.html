@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Studio Lab — Asteria Studio{% endblock %}
+{% block description %}Compose a deterministic five-color palette from a seed, check WCAG contrast against ink, and preview a major-third type scale.{% endblock %}
+
+{% block content %}
+      <section class="page-hero" aria-label="Studio Lab">
+        <div class="hero-content">
+          <p class="eyebrow">Studio Lab</p>
+          <h1>Color and type, from a seed.</h1>
+          <p class="hero-copy">
+            Hash a phrase into five studio colors, measure contrast against ink
+            <span data-ink>{{ ink }}</span>, and read a major-third scale from 16px.
+          </p>
+        </div>
+      </section>
+
+      <section class="section lab-section" data-lab>
+        <div class="lab-layout">
+          <form class="contact-form lab-form" method="get" action="{{ url_for('lab') }}" data-lab-form>
+            <label>
+              Seed
+              <input name="seed" type="text" value="{{ seed }}" autocomplete="off" data-lab-seed>
+            </label>
+            <button class="button button-primary" type="submit">Compose palette</button>
+            <p class="form-status">SHA-256 of the seed. Same phrase, same five colors.</p>
+          </form>
+
+          <div>
+            <div class="section-heading">
+              <p class="eyebrow">Palette</p>
+              <h2>Swatches against ink.</h2>
+            </div>
+            <div class="swatch-grid" data-swatch-grid>
+              {% for swatch in swatches %}
+                <article class="swatch" data-swatch>
+                  <div class="swatch-chip" data-swatch-chip style="background: {{ swatch.hex }}"></div>
+                  <div class="swatch-body">
+                    <p data-swatch-hex>{{ swatch.hex }}</p>
+                    <h3><span data-swatch-ratio>{{ "%.2f"|format(swatch.ratio) }}</span>:1 vs ink</h3>
+                    <span class="{% if swatch.aa %}aa-pass{% else %}aa-fail{% endif %}" data-swatch-aa>
+                      {% if swatch.aa %}AA pass{% else %}AA fail{% endif %}
+                    </span>
+                    <span class="{% if swatch.aa_large %}aa-pass{% else %}aa-fail{% endif %}" data-swatch-aa-large>
+                      {% if swatch.aa_large %}AA large pass{% else %}AA large fail{% endif %}
+                    </span>
+                  </div>
+                </article>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+
+        <div class="section-heading type-heading">
+          <p class="eyebrow">Type scale</p>
+          <h2>Major third from 16px.</h2>
+        </div>
+        <div class="type-scale" data-type-scale>
+          {% for size in scale %}
+            <div class="type-row">
+              <span>{% if size == size|int %}{{ size|int }}{% else %}{{ size }}{% endif %}px</span>
+              <p style="font-size: {{ size }}px">Asteria Studio</p>
+            </div>
+          {% endfor %}
+        </div>
+      </section>
+{% endblock %}
+
+{% block scripts %}
+    <script src="{{ url_for('static', filename='js/lab.js') }}" defer></script>
+{% endblock %}
