@@ -4,7 +4,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from freeze import freeze, rewrite_urls  # noqa: E402
+from freeze import PAGES_ORIGIN, freeze, rewrite_urls, sitemap_locs  # noqa: E402
 
 
 def test_rewrite_urls_uses_relative_asset_paths():
@@ -69,3 +69,33 @@ def test_freeze_writes_pages_and_assets(tmp_path):
     assert 'href="../../css/styles.css"' in work
     assert "Studio Lab" in lab
     assert "Northline" in work
+    assert "Best on ink" in lab
+    assert "SCSS map" in lab
+    assert "$studio:" in lab
+    assert not (dest / "lab.json").exists()
+
+    sitemap = (dest / "sitemap.xml").read_text(encoding="utf-8")
+    robots = (dest / "robots.txt").read_text(encoding="utf-8")
+    locs = sitemap_locs()
+    assert locs == [
+        f"{PAGES_ORIGIN}/",
+        f"{PAGES_ORIGIN}/lab/",
+        f"{PAGES_ORIGIN}/journal/",
+        f"{PAGES_ORIGIN}/work/northline/",
+        f"{PAGES_ORIGIN}/work/meridian/",
+        f"{PAGES_ORIGIN}/work/cobalt-room/",
+        f"{PAGES_ORIGIN}/journal/ink-and-paper/",
+        f"{PAGES_ORIGIN}/journal/a-scale-you-can-hear/",
+    ]
+    for loc in locs:
+        assert loc in sitemap
+        assert loc.endswith("/")
+    assert "lab.json" not in sitemap
+    assert "Allow: /" in robots
+    assert f"Sitemap: {PAGES_ORIGIN}/sitemap.xml" in robots
+
+    css = (dest / "css" / "styles.css").read_text(encoding="utf-8")
+    assert "@media print" in css
+    assert ".site-nav" in css.split("@media print")[1]
+    assert ".menu-toggle" in css.split("@media print")[1]
+    assert ".contact-form" in css.split("@media print")[1]

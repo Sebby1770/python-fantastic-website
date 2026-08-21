@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.2.0] - 2026-08-21
+
+### Added
+
+- `best_on_ink`, `scss_map`, and `recommend_body` in `studio.py`
+- Studio Lab callouts for the best-on-ink swatch and a recommended body pair, plus a copyable SCSS map
+- `GET /lab.json?seed=` JSON export (`seed`, `palette`, `ink`, `css`, `scss`, `best_on_ink`)
+- Frozen `docs/sitemap.xml` and `docs/robots.txt` for GitHub Pages
+
+### Changed
+
+- Print stylesheet hides header nav, the menu toggle, and the contact form so work and journal articles stay readable
+- README and project metadata at 2.2.0
+
 ## [2.1.0] - 2026-08-21
 
 ### Added

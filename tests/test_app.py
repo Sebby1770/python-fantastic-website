@@ -1,5 +1,14 @@
+from pytest import approx
+
 from app import CONTACT_RATE_LIMIT, JOURNAL, create_app
-from studio import TYPE_RATIOS, css_variables, palette_from_seed, type_scale
+from studio import (
+    TYPE_RATIOS,
+    best_on_ink,
+    css_variables,
+    palette_from_seed,
+    scss_map,
+    type_scale,
+)
 
 
 def test_homepage_renders_brand_and_sections():
@@ -112,8 +121,40 @@ def test_lab_renders_palette_and_type_scale():
     assert 'name="ratio"' in html
     assert 'value="major-third"' in html
     assert css_variables(palette).splitlines()[0] in html
+    assert scss_map(palette) in html
+    assert best_on_ink(palette)["hex"] in html
+    assert "Best on ink" in html
+    assert "Body pair" in html
+    assert "SCSS map" in html
     assert "Foreground" in html
     assert "Copy" in html
+    assert "data-body-pair hidden" in html
+
+
+def test_lab_json_returns_palette_tokens():
+    app = create_app()
+    seed = "asteria"
+    palette = palette_from_seed(seed)
+    best = best_on_ink(palette)
+
+    with app.test_client() as client:
+        response = client.get("/lab.json?seed=asteria")
+        defaulted = client.get("/lab.json")
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["seed"] == seed
+    assert payload["palette"] == palette
+    assert payload["ink"] == "#101418"
+    assert payload["css"] == css_variables(palette)
+    assert payload["scss"] == scss_map(palette)
+    assert payload["best_on_ink"]["hex"] == best["hex"]
+    assert payload["best_on_ink"]["aa"] is best["aa"]
+    assert payload["best_on_ink"]["aaa"] is best["aaa"]
+    assert payload["best_on_ink"]["ratio"] == approx(best["ratio"])
+    assert set(payload) == {"seed", "palette", "ink", "css", "scss", "best_on_ink"}
+    assert defaulted.status_code == 200
+    assert defaulted.get_json()["seed"] == "asteria"
 
 
 def test_lab_seed_changes_palette():

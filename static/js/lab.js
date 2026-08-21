@@ -1,4 +1,4 @@
-/* Mirrors studio.py: SHA-256 seed, HSL palette, WCAG contrast, pairings, CSS tokens, type scale. */
+/* Mirrors studio.py: SHA-256 seed, HSL palette, WCAG contrast, pairings, CSS/SCSS tokens, type scale. */
 
 const INK = "#101418";
 const HUE_OFFSETS = [0, 24, 48, 172, 208];
@@ -93,6 +93,30 @@ function cssVariables(palette) {
   const tokens = palette.map((color, index) => `--studio-${index + 1}: ${color};`);
   tokens.push(`--studio-ink: ${INK};`);
   return `:root { ${tokens.join(" ")} }`;
+}
+
+function scssMap(palette) {
+  const tokens = palette.map((color, index) => `"${index + 1}": ${color}`);
+  tokens.push(`"ink": ${INK}`);
+  return `$studio: (${tokens.join(", ")});`;
+}
+
+function bestOnInk(palette, ink = INK) {
+  let hex = palette[0];
+  let ratio = contrastRatio(hex, ink);
+  for (let index = 1; index < palette.length; index += 1) {
+    const next = contrastRatio(palette[index], ink);
+    if (next > ratio) {
+      hex = palette[index];
+      ratio = next;
+    }
+  }
+  return { hex, ratio, aa: passesAa(hex, ink), aaa: passesAaa(hex, ink) };
+}
+
+function recommendBody(palette) {
+  const consecutive = pairingTable(palette).slice(palette.length);
+  return consecutive.find((row) => row.aa) || null;
 }
 
 function pairingTable(palette, ink = INK) {
@@ -190,6 +214,47 @@ function renderCss(css) {
   if (node) node.textContent = css;
 }
 
+function renderScss(scss) {
+  const node = document.querySelector("[data-scss-map]");
+  if (node) node.textContent = scss;
+}
+
+function renderBestOnInk(best) {
+  const root = document.querySelector("[data-best-on-ink]");
+  if (!root || !best) return;
+  const chip = root.querySelector("[data-best-chip]");
+  const hexNode = root.querySelector("[data-best-hex]");
+  const ratioNode = root.querySelector("[data-best-ratio]");
+  if (chip) chip.style.background = best.hex;
+  if (hexNode) hexNode.textContent = best.hex;
+  if (ratioNode) ratioNode.textContent = best.ratio.toFixed(2);
+  setBadge(root.querySelector("[data-best-aa]"), best.aa, "AA pass", "AA fail");
+  setBadge(root.querySelector("[data-best-aaa]"), best.aaa, "AAA pass", "AAA fail");
+}
+
+function renderBodyPair(pair) {
+  const root = document.querySelector("[data-body-pair]");
+  if (!root) return;
+  if (!pair) {
+    root.hidden = true;
+    return;
+  }
+  root.hidden = false;
+  const preview = root.querySelector("[data-body-preview]");
+  const fgNode = root.querySelector("[data-body-fg]");
+  const bgNode = root.querySelector("[data-body-bg]");
+  const ratioNode = root.querySelector("[data-body-ratio]");
+  if (preview) {
+    preview.style.color = pair.fg;
+    preview.style.background = pair.bg;
+  }
+  if (fgNode) fgNode.textContent = pair.fg;
+  if (bgNode) bgNode.textContent = pair.bg;
+  if (ratioNode) ratioNode.textContent = pair.ratio.toFixed(2);
+  setBadge(root.querySelector("[data-body-aa]"), pair.aa, "AA pass", "AA fail");
+  setBadge(root.querySelector("[data-body-aaa]"), pair.aaa, "AAA pass", "AAA fail");
+}
+
 function renderTypeScale(sizes, name) {
   const heading = document.querySelector("[data-type-heading]");
   if (heading) heading.textContent = `${ratioLabel(name)} from 16px.`;
@@ -213,34 +278,39 @@ async function compose(seed, ratioName) {
   const ratioKey = resolveRatio(ratioName);
   renderPalette(colors);
   renderPairing(pairingTable(colors));
+  renderBestOnInk(bestOnInk(colors));
+  renderBodyPair(recommendBody(colors));
   renderCss(cssVariables(colors));
+  renderScss(scssMap(colors));
   renderTypeScale(typeScale(16, TYPE_RATIOS[ratioKey], 6), ratioKey);
 }
 
-function initCopyButton() {
-  const copyButton = document.querySelector("[data-copy-css]");
-  const cssNode = document.querySelector("[data-css-variables]");
-  if (!copyButton || !cssNode) return;
-
-  copyButton.addEventListener("click", async () => {
-    const text = cssNode.textContent || "";
+function bindCopyButton(button, source) {
+  if (!button || !source) return;
+  button.addEventListener("click", async () => {
+    const text = source.textContent || "";
     try {
       await navigator.clipboard.writeText(text);
-      copyButton.textContent = "Copied";
+      button.textContent = "Copied";
       window.setTimeout(() => {
-        copyButton.textContent = "Copy";
+        button.textContent = "Copy";
       }, 1600);
     } catch {
-      copyButton.textContent = "Copy failed";
+      button.textContent = "Copy failed";
       window.setTimeout(() => {
-        copyButton.textContent = "Copy";
+        button.textContent = "Copy";
       }, 1600);
     }
   });
 }
 
+function initCopyButtons() {
+  bindCopyButton(document.querySelector("[data-copy-css]"), document.querySelector("[data-css-variables]"));
+  bindCopyButton(document.querySelector("[data-copy-scss]"), document.querySelector("[data-scss-map]"));
+}
+
 function initLab() {
-  initCopyButton();
+  initCopyButtons();
 
   const form = document.querySelector("[data-lab-form]");
   const input = document.querySelector("[data-lab-seed]");

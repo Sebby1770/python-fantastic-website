@@ -13,6 +13,7 @@ from app import JOURNAL, WORK, create_app  # noqa: E402
 
 DOCS = ROOT / "docs"
 STATIC = ROOT / "static"
+PAGES_ORIGIN = "https://sebby1770.github.io/python-fantastic-website"
 
 
 def rewrite_urls(html: str, depth: int) -> str:
@@ -25,6 +26,38 @@ def rewrite_urls(html: str, depth: int) -> str:
     html = html.replace('href="/#', f'href="{prefix}index.html#')
     html = re.sub(r'\bhref="/"', f'href="{prefix}index.html"', html)
     return html
+
+
+def sitemap_locs() -> list[str]:
+    locs = [
+        f"{PAGES_ORIGIN}/",
+        f"{PAGES_ORIGIN}/lab/",
+        f"{PAGES_ORIGIN}/journal/",
+    ]
+    locs.extend(f"{PAGES_ORIGIN}/work/{item.slug}/" for item in WORK)
+    locs.extend(f"{PAGES_ORIGIN}/journal/{post.slug}/" for post in JOURNAL)
+    return locs
+
+
+def write_sitemap(dest: Path) -> None:
+    rows = "\n".join(f"  <url>\n    <loc>{loc}</loc>\n  </url>" for loc in sitemap_locs())
+    xml = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        f"{rows}\n"
+        "</urlset>\n"
+    )
+    (dest / "sitemap.xml").write_text(xml, encoding="utf-8")
+
+
+def write_robots(dest: Path) -> None:
+    (dest / "robots.txt").write_text(
+        "User-agent: *\n"
+        "Allow: /\n"
+        "\n"
+        f"Sitemap: {PAGES_ORIGIN}/sitemap.xml\n",
+        encoding="utf-8",
+    )
 
 
 def freeze(dest: Path | None = None) -> Path:
@@ -61,6 +94,9 @@ def freeze(dest: Path | None = None) -> Path:
                 raise RuntimeError(f"Failed to freeze {url}: {response.status_code}")
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(rewrite_urls(response.get_data(as_text=True), depth), encoding="utf-8")
+
+    write_sitemap(dest)
+    write_robots(dest)
     return dest
 
 

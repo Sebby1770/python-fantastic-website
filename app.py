@@ -11,12 +11,15 @@ from flask import Flask, abort, jsonify, render_template, request
 from studio import (
     INK,
     TYPE_RATIOS,
+    best_on_ink,
     contrast_ratio,
     css_variables,
     palette_from_seed,
     pairing_table,
     passes_aa,
     passes_aaa,
+    recommend_body,
+    scss_map,
     type_scale,
 )
 
@@ -310,6 +313,24 @@ def create_app() -> Flask:
             ratios=TYPE_RATIOS,
             pairings=pairing_table(palette),
             css_vars=css_variables(palette),
+            scss=scss_map(palette),
+            best=best_on_ink(palette),
+            body_pair=recommend_body(palette),
+        )
+
+    @app.get("/lab.json")
+    def lab_json():
+        seed = (request.args.get("seed") or "asteria").strip() or "asteria"
+        palette = palette_from_seed(seed)
+        return jsonify(
+            {
+                "seed": seed,
+                "palette": palette,
+                "ink": INK,
+                "css": css_variables(palette),
+                "scss": scss_map(palette),
+                "best_on_ink": best_on_ink(palette),
+            }
         )
 
     @app.get("/journal")

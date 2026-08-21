@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://sebby1770.github.io/python-fantastic-website/sitemap.xml

@@ -21,12 +21,15 @@ _LIGHTS = (0.30, 0.42, 0.54, 0.66, 0.78)
 __all__ = [
     "INK",
     "TYPE_RATIOS",
+    "best_on_ink",
     "contrast_ratio",
     "css_variables",
     "palette_from_seed",
     "pairing_table",
     "passes_aa",
     "passes_aaa",
+    "recommend_body",
+    "scss_map",
     "type_scale",
 ]
 
@@ -116,6 +119,42 @@ def css_variables(palette: list[str]) -> str:
     tokens = [f"--studio-{index}: {color};" for index, color in enumerate(palette, start=1)]
     tokens.append(f"--studio-ink: {INK};")
     return ":root { " + " ".join(tokens) + " }"
+
+
+def scss_map(palette: list[str]) -> str:
+    """Return a $studio Sass map of numbered swatches plus ink."""
+    tokens = [f'"{index}": {color}' for index, color in enumerate(palette, start=1)]
+    tokens.append(f'"ink": {INK}')
+    return "$studio: (" + ", ".join(tokens) + ");"
+
+
+def best_on_ink(palette: list[str], ink: str = INK) -> dict:
+    """Return the palette color with the highest contrast against ink.
+
+    Ties keep the first swatch.
+    """
+    winner = palette[0]
+    best_ratio = contrast_ratio(winner, ink)
+    for color in palette[1:]:
+        ratio = contrast_ratio(color, ink)
+        if ratio > best_ratio:
+            winner = color
+            best_ratio = ratio
+    return {
+        "hex": winner,
+        "ratio": best_ratio,
+        "aa": passes_aa(winner, ink),
+        "aaa": passes_aaa(winner, ink),
+    }
+
+
+def recommend_body(palette: list[str]) -> dict | None:
+    """Return the first consecutive pairing_table pair that passes AA for body text."""
+    consecutive = pairing_table(palette)[len(palette) :]
+    for row in consecutive:
+        if row["aa"]:
+            return row
+    return None
 
 
 def pairing_table(palette: list[str], ink: str = INK) -> list[dict]:

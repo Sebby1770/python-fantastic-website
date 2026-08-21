@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Compose a deterministic five-color palette from a seed, check WCAG AA and AAA contrast, export CSS variables, and preview a modular type scale.">
+    <meta name="description" content="Compose a deterministic five-color palette from a seed, check WCAG AA and AAA contrast, export CSS and SCSS tokens, and preview a modular type scale.">
     <title>Studio Lab — Asteria Studio</title>
     <link rel="icon" href="../img/favicon.svg" type="image/svg+xml">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -48,8 +48,8 @@
           <h1>Color and type, from a seed.</h1>
           <p class="hero-copy">
             Hash a phrase into five studio colors, measure AA and AAA against ink
-            <span data-ink>#101418</span>, pair neighbors, export CSS variables,
-            and read a modular scale from 16px.
+            <span data-ink>#101418</span>, call out the best on ink, recommend a
+            body pair, export CSS and SCSS tokens, and read a modular scale from 16px.
           </p>
         </div>
       </section>
@@ -196,6 +196,47 @@
                   </div>
                 </article>
               
+            </div>
+
+            <div class="lab-callouts">
+              <article class="lab-callout" data-best-on-ink>
+                <p class="eyebrow">Best on ink</p>
+                <div class="lab-callout-swatch" data-best-chip style="background: #83d1db"></div>
+                <p data-best-hex>#83d1db</p>
+                <h3><span data-best-ratio>10.67</span>:1 vs ink</h3>
+                <div class="swatch-badges">
+                  <span class="aa-pass" data-best-aa>
+                    AA pass
+                  </span>
+                  <span class="aa-pass" data-best-aaa>
+                    AAA pass
+                  </span>
+                </div>
+              </article>
+              <article class="lab-callout" data-body-pair hidden>
+                <p class="eyebrow">Body pair</p>
+                <div
+                  class="body-preview"
+                  data-body-preview
+                  
+                >
+                  A line of body copy on the next swatch.
+                </div>
+                <p>
+                  <span data-body-fg></span>
+                  on
+                  <span data-body-bg></span>
+                </p>
+                <h3><span data-body-ratio></span>:1</h3>
+                <div class="swatch-badges">
+                  <span class="aa-fail" data-body-aa>
+                    AA fail
+                  </span>
+                  <span class="aa-fail" data-body-aaa>
+                    AAA fail
+                  </span>
+                </div>
+              </article>
             </div>
 
             <div class="pairing-block">
@@ -367,15 +408,28 @@
           </div>
         </div>
 
-        <div class="css-export" data-css-export>
-          <div class="css-export-header">
-            <div class="section-heading">
-              <p class="eyebrow">Tokens</p>
-              <h2>CSS variables.</h2>
+        <div class="token-exports">
+          <div class="css-export" data-css-export>
+            <div class="css-export-header">
+              <div class="section-heading">
+                <p class="eyebrow">Tokens</p>
+                <h2>CSS variables.</h2>
+              </div>
+              <button class="button button-paper" type="button" data-copy-css>Copy</button>
             </div>
-            <button class="button button-paper" type="button" data-copy-css>Copy</button>
+            <pre data-css-variables>:root { --studio-1: #66381f; --studio-2: #a76538; --studio-3: #a9be5c; --studio-4: #83d1db; --studio-5: #a4b0d9; --studio-ink: #101418; }</pre>
           </div>
-          <pre data-css-variables>:root { --studio-1: #66381f; --studio-2: #a76538; --studio-3: #a9be5c; --studio-4: #83d1db; --studio-5: #a4b0d9; --studio-ink: #101418; }</pre>
+
+          <div class="css-export" data-scss-export>
+            <div class="css-export-header">
+              <div class="section-heading">
+                <p class="eyebrow">Tokens</p>
+                <h2>SCSS map.</h2>
+              </div>
+              <button class="button button-paper" type="button" data-copy-scss>Copy</button>
+            </div>
+            <pre data-scss-map>$studio: ("1": #66381f, "2": #a76538, "3": #a9be5c, "4": #83d1db, "5": #a4b0d9, "ink": #101418);</pre>
+          </div>
         </div>
 
         <div class="section-heading type-heading">

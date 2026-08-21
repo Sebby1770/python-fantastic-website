@@ -3,12 +3,15 @@ from pytest import approx, raises
 from studio import (
     INK,
     TYPE_RATIOS,
+    best_on_ink,
     contrast_ratio,
     css_variables,
     palette_from_seed,
     pairing_table,
     passes_aa,
     passes_aaa,
+    recommend_body,
+    scss_map,
     type_scale,
 )
 
@@ -73,6 +76,46 @@ def test_css_variables_snapshot():
         "--studio-3: #a9be5c; --studio-4: #83d1db; --studio-5: #a4b0d9; "
         "--studio-ink: #101418; }"
     )
+
+
+def test_scss_map_snapshot():
+    assert scss_map(palette_from_seed("asteria")) == (
+        '$studio: ("1": #66381f, "2": #a76538, "3": #a9be5c, '
+        '"4": #83d1db, "5": #a4b0d9, "ink": #101418);'
+    )
+
+
+def test_best_on_ink_asteria():
+    palette = palette_from_seed("asteria")
+    best = best_on_ink(palette)
+    assert best["hex"] == "#83d1db"
+    assert best["ratio"] == approx(contrast_ratio("#83d1db", INK))
+    assert best["aa"] is True
+    assert best["aaa"] is True
+    assert set(best) == {"hex", "ratio", "aa", "aaa"}
+
+
+def test_best_on_ink_tie_keeps_first():
+    tied = ["#c8c8c8", "#c8c8c8"]
+    best = best_on_ink(tied)
+    assert best["hex"] == "#c8c8c8"
+    lighter = best_on_ink(["#444444", "#f2f2f2", "#e8e8e8"])
+    assert lighter["hex"] == "#f2f2f2"
+
+
+def test_recommend_body_asteria_has_no_aa_pair():
+    assert recommend_body(palette_from_seed("asteria")) is None
+
+
+def test_recommend_body_first_consecutive_aa_pair():
+    palette = ["#111111", "#222222", "#f7f7f7", "#eeeeee"]
+    recommended = recommend_body(palette)
+    assert recommended is not None
+    assert recommended["fg"] == "#222222"
+    assert recommended["bg"] == "#f7f7f7"
+    assert recommended["aa"] is True
+    assert recommended["aaa"] is passes_aaa("#222222", "#f7f7f7")
+    assert recommended["ratio"] == approx(contrast_ratio("#222222", "#f7f7f7"))
 
 
 def test_pairing_table_ink_and_neighbors():

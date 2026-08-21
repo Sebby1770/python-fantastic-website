@@ -616,6 +616,60 @@ a.work-card:focus-visible {
   gap: 0.35rem 0.7rem;
 }
 
+.lab-callouts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-top: 1.6rem;
+}
+
+.lab-callout {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 1.2rem 1.25rem 1.3rem;
+  background: var(--white);
+  box-shadow: 0 16px 48px rgba(16, 20, 24, 0.08);
+}
+
+.lab-callout .eyebrow {
+  color: var(--teal);
+}
+
+.lab-callout p,
+.lab-callout h3 {
+  margin: 0;
+}
+
+.lab-callout p:not(.eyebrow) {
+  color: var(--teal);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.lab-callout h3 {
+  margin: 0.2rem 0 0.55rem;
+  font-size: 1.05rem;
+}
+
+.lab-callout-swatch {
+  min-height: 4.6rem;
+  margin: 0.85rem 0 1rem;
+  border-radius: 6px;
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+.body-preview {
+  margin: 0.85rem 0 1rem;
+  border-radius: 6px;
+  padding: 1.05rem 1.1rem;
+  color: var(--paper);
+  background: var(--ink);
+  font-weight: 700;
+  box-shadow: 0 0 0 1px var(--line);
+}
+
 .pairing-block {
   margin-top: 2.4rem;
 }
@@ -667,8 +721,14 @@ a.work-card:focus-visible {
   box-shadow: 0 0 0 1px var(--line);
 }
 
-.css-export {
+.token-exports {
+  display: grid;
+  gap: 2rem;
   margin: 0 0 4rem;
+}
+
+.css-export {
+  margin: 0;
 }
 
 .css-export-header {
@@ -899,6 +959,7 @@ a.work-card:focus-visible {
   .contact-section,
   .service-row,
   .lab-layout,
+  .lab-callouts,
   .case-layout,
   .css-export-header {
     grid-template-columns: 1fr;
@@ -983,6 +1044,54 @@ a.work-card:focus-visible {
   .type-row {
     grid-template-columns: 1fr;
     gap: 0.35rem;
+  }
+}
+
+@media print {
+  .site-nav,
+  .menu-toggle,
+  .contact-form {
+    display: none !important;
+  }
+
+  .site-header {
+    position: static;
+    color: var(--ink);
+    background: none;
+  }
+
+  .brand,
+  .site-footer {
+    color: var(--ink);
+  }
+
+  .page-hero,
+  .page-hero-work,
+  .hero {
+    min-height: 0;
+    color: var(--ink);
+    background: none;
+    padding-top: 1.4rem;
+    padding-bottom: 1rem;
+  }
+
+  .page-hero .eyebrow,
+  .hero .eyebrow {
+    color: var(--teal);
+  }
+
+  .journal-prose,
+  .journal-prose p,
+  .case-copy,
+  .case-copy p,
+  .case-aside {
+    color: var(--ink);
+  }
+
+  .case-aside,
+  .journal-card,
+  .work-card {
+    box-shadow: none;
   }
 }
 
