@@ -9,9 +9,10 @@
           <p class="eyebrow">Studio Lab</p>
           <h1>Color and type, from a seed.</h1>
           <p class="hero-copy">
-            Hash a phrase into five studio colors, measure AA and AAA against ink
-            <span data-ink>{{ ink }}</span>, call out the best on ink, recommend a
-            body pair, export CSS and SCSS tokens, and read a modular scale from 16px.
+            Hash a phrase into five studio colors, mix two swatches, measure AA and AAA against ink
+            <span data-ink>{{ ink }}</span>, call out the closest CIE76 pair and the best on ink,
+            recommend a body pair, export CSS, SCSS, JSON, and Tailwind tokens, and read a modular
+            scale from 16px.
           </p>
         </div>
       </section>
@@ -32,6 +33,7 @@
               </select>
             </label>
             <button class="button button-primary" type="submit">Compose palette</button>
+            <button class="button button-paper" type="button" data-copy-lab-link>Copy lab link</button>
             <p class="form-status">SHA-256 of the seed. Same phrase, same five colors.</p>
           </form>
 
@@ -46,6 +48,7 @@
                   <div class="swatch-chip" data-swatch-chip style="background: {{ swatch.hex }}"></div>
                   <div class="swatch-body">
                     <p data-swatch-hex>{{ swatch.hex }}</p>
+                    <p data-swatch-hsl>{{ swatch.hsl.h }}° {{ swatch.hsl.s }}% {{ swatch.hsl.l }}%</p>
                     <h3><span data-swatch-ratio>{{ "%.2f"|format(swatch.ratio) }}</span>:1 vs ink</h3>
                     <div class="swatch-badges">
                       <span class="{% if swatch.aa %}aa-pass{% else %}aa-fail{% endif %}" data-swatch-aa>
@@ -66,6 +69,40 @@
               {% endfor %}
             </div>
 
+            <article class="lab-mix" data-mix>
+              <div class="section-heading">
+                <p class="eyebrow">Mix</p>
+                <h2>A color between two swatches.</h2>
+              </div>
+              <div class="lab-mix-controls">
+                <label>
+                  From
+                  <select data-mix-a>
+                    {% for swatch in swatches %}
+                      <option value="{{ loop.index0 }}"{% if loop.index0 == mix.a %} selected{% endif %}>{{ loop.index0 }} · {{ swatch.hex }}</option>
+                    {% endfor %}
+                  </select>
+                </label>
+                <label>
+                  To
+                  <select data-mix-b>
+                    {% for swatch in swatches %}
+                      <option value="{{ loop.index0 }}"{% if loop.index0 == mix.b %} selected{% endif %}>{{ loop.index0 }} · {{ swatch.hex }}</option>
+                    {% endfor %}
+                  </select>
+                </label>
+                <label>
+                  <span class="lab-mix-t">t <span data-mix-t-label>{{ "%.2f"|format(mix.t) }}</span></span>
+                  <input type="range" min="0" max="1" step="0.01" value="{{ mix.t }}" data-mix-t>
+                </label>
+              </div>
+              <div class="lab-mix-result">
+                <div class="lab-callout-swatch" data-mix-chip style="background: {{ mix.hex }}"></div>
+                <p data-mix-hex>{{ mix.hex }}</p>
+                <h3><span data-mix-ratio>{{ "%.2f"|format(mix.ratio) }}</span>:1 vs ink</h3>
+              </div>
+            </article>
+
             <div class="lab-callouts">
               <article class="lab-callout" data-best-on-ink>
                 <p class="eyebrow">Best on ink</p>
@@ -80,6 +117,20 @@
                     {% if best.aaa %}AAA pass{% else %}AAA fail{% endif %}
                   </span>
                 </div>
+              </article>
+              <article class="lab-callout" data-closest-pair{% if not closest %} hidden{% endif %}>
+                <p class="eyebrow">Closest pair</p>
+                <div class="closest-chips">
+                  <div class="lab-callout-swatch" data-closest-a-chip{% if closest %} style="background: {{ closest.a }}"{% endif %}></div>
+                  <div class="lab-callout-swatch" data-closest-b-chip{% if closest %} style="background: {{ closest.b }}"{% endif %}></div>
+                </div>
+                <p>
+                  <span data-closest-a>{% if closest %}{{ closest.a }}{% endif %}</span>
+                  ·
+                  <span data-closest-b>{% if closest %}{{ closest.b }}{% endif %}</span>
+                </p>
+                <h3>ΔE <span data-closest-delta>{% if closest %}{{ "%.1f"|format(closest.delta_e) }}{% endif %}</span></h3>
+                <p class="closest-index">swatches <span data-closest-i>{% if closest %}{{ closest.i }}{% endif %}</span> and <span data-closest-j>{% if closest %}{{ closest.j }}{% endif %}</span></p>
               </article>
               <article class="lab-callout" data-body-pair{% if not body_pair %} hidden{% endif %}>
                 <p class="eyebrow">Body pair</p>
@@ -169,6 +220,28 @@
               <button class="button button-paper" type="button" data-copy-scss>Copy</button>
             </div>
             <pre data-scss-map>{{ scss|safe }}</pre>
+          </div>
+
+          <div class="css-export" data-json-export>
+            <div class="css-export-header">
+              <div class="section-heading">
+                <p class="eyebrow">Tokens</p>
+                <h2>JSON tokens.</h2>
+              </div>
+              <button class="button button-paper" type="button" data-copy-json>Copy</button>
+            </div>
+            <pre data-json-tokens>{{ tokens|safe }}</pre>
+          </div>
+
+          <div class="css-export" data-tailwind-export>
+            <div class="css-export-header">
+              <div class="section-heading">
+                <p class="eyebrow">Tokens</p>
+                <h2>Tailwind theme.</h2>
+              </div>
+              <button class="button button-paper" type="button" data-copy-tailwind>Copy</button>
+            </div>
+            <pre data-tailwind-theme>{{ tailwind|safe }}</pre>
           </div>
         </div>
 

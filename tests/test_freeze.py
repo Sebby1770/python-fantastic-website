@@ -4,6 +4,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
+from app import JOURNAL  # noqa: E402
 from freeze import PAGES_ORIGIN, freeze, rewrite_urls, sitemap_locs  # noqa: E402
 
 
@@ -72,7 +73,20 @@ def test_freeze_writes_pages_and_assets(tmp_path):
     assert "Best on ink" in lab
     assert "SCSS map" in lab
     assert "$studio:" in lab
+    assert "Copy lab link" in lab
+    assert "data-mix" in lab
     assert not (dest / "lab.json").exists()
+    assert 'rel="alternate"' in journal
+    assert 'type="application/rss+xml"' in journal
+    assert "feed.xml" in journal
+
+    feed = (dest / "feed.xml").read_text(encoding="utf-8")
+    assert 'rss version="2.0"' in feed
+    assert f"{PAGES_ORIGIN}/journal/" in feed
+    for post in JOURNAL:
+        assert post.title in feed
+        assert post.dek in feed
+        assert f"{PAGES_ORIGIN}/journal/{post.slug}/" in feed
 
     sitemap = (dest / "sitemap.xml").read_text(encoding="utf-8")
     robots = (dest / "robots.txt").read_text(encoding="utf-8")

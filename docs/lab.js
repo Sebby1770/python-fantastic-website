@@ -1,4 +1,8 @@
-/* Mirrors studio.py: SHA-256 seed, HSL palette, WCAG contrast, pairings, CSS/SCSS tokens, type scale. */
+/* Mirrors studio.py: SHA-256 seed, HSL palette, WCAG contrast, mix/shade/tint, CIE76, pairings, CSS/SCSS/JSON/Tailwind tokens, type scale. */
+
+const XYZ_D65 = [0.95047, 1, 1.08883];
+const LAB_DELTA = 6 / 29;
+const LAB_DELTA_CUBE = LAB_DELTA ** 3;
 
 const INK = "#101418";
 const HUE_OFFSETS = [0, 24, 48, 172, 208];
@@ -68,6 +72,37 @@ function hexToRgb(color) {
   return [parseInt(raw.slice(0, 2), 16), parseInt(raw.slice(2, 4), 16), parseInt(raw.slice(4, 6), 16)];
 }
 
+function mixHex(a, b, t) {
+  const amount = clamp(Number(t), 0, 1);
+  const [redA, greenA, blueA] = hexToRgb(a);
+  const [redB, greenB, blueB] = hexToRgb(b);
+  const mix = (left, right) => {
+    const value = (left / 255) * (1 - amount) + (right / 255) * amount;
+    return Math.floor(value * 255 + 0.5);
+  };
+  const hex = (channel) => channel.toString(16).padStart(2, "0");
+  return `#${hex(mix(redA, redB))}${hex(mix(greenA, greenB))}${hex(mix(blueA, blueB))}`;
+}
+
+function shade(hexColor, amount = 0.15) {
+  return mixHex(hexColor, "#000000", amount);
+}
+
+function tint(hexColor, amount = 0.15) {
+  return mixHex(hexColor, "#ffffff", amount);
+}
+
+function quotePlus(value) {
+  return encodeURIComponent(String(value))
+    .replace(/%20/g, "+")
+    .replace(/[!'()*~]/g, (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`)
+    .replace(/%2F/gi, "/");
+}
+
+function labQuery(seed, ratio = "major-third") {
+  return `seed=${quotePlus(seed)}&ratio=${quotePlus(ratio)}`;
+}
+
 function relativeLuminance(color) {
   const [red, green, blue] = hexToRgb(color);
   return 0.2126 * linearize(red) + 0.7152 * linearize(green) + 0.0722 * linearize(blue);
@@ -99,6 +134,97 @@ function scssMap(palette) {
   const tokens = palette.map((color, index) => `"${index + 1}": ${color}`);
   tokens.push(`"ink": ${INK}`);
   return `$studio: (${tokens.join(", ")});`;
+}
+
+function roundInt(value) {
+  return Math.floor(value + 0.5);
+}
+
+function hexToHsl(color) {
+  const [red, green, blue] = hexToRgb(color).map((channel) => channel / 255);
+  const maxC = Math.max(red, green, blue);
+  const minC = Math.min(red, green, blue);
+  const light = (maxC + minC) / 2;
+  let hue = 0;
+  let sat = 0;
+  if (maxC !== minC) {
+    const delta = maxC - minC;
+    const denom = 1 - Math.abs(2 * light - 1);
+    sat = denom ? delta / denom : 0;
+    if (maxC === red) {
+      hue = ((green - blue) / delta) % 6;
+      if (hue < 0) hue += 6;
+    } else if (maxC === green) {
+      hue = (blue - red) / delta + 2;
+    } else {
+      hue = (red - green) / delta + 4;
+    }
+    hue *= 60;
+  }
+  if (hue < 0) hue += 360;
+  return {
+    h: roundInt(hue) % 360,
+    s: clamp(roundInt(sat * 100), 0, 100),
+    l: clamp(roundInt(light * 100), 0, 100),
+  };
+}
+
+function labF(t) {
+  if (t > LAB_DELTA_CUBE) return t ** (1 / 3);
+  return t / (3 * LAB_DELTA * LAB_DELTA) + 4 / 29;
+}
+
+function hexToLab(color) {
+  const [red, green, blue] = hexToRgb(color);
+  const r = linearize(red);
+  const g = linearize(green);
+  const b = linearize(blue);
+  const x = 0.4124564 * r + 0.3575761 * g + 0.1804375 * b;
+  const y = 0.2126729 * r + 0.7151522 * g + 0.072175 * b;
+  const z = 0.0193339 * r + 0.119192 * g + 0.9503041 * b;
+  const fx = labF(x / XYZ_D65[0]);
+  const fy = labF(y / XYZ_D65[1]);
+  const fz = labF(z / XYZ_D65[2]);
+  return [116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)];
+}
+
+function deltaE76(a, b) {
+  const [l1, a1, b1] = hexToLab(a);
+  const [l2, a2, b2] = hexToLab(b);
+  return Math.sqrt((l1 - l2) ** 2 + (a1 - a2) ** 2 + (b1 - b2) ** 2);
+}
+
+function closestPair(palette) {
+  if (palette.length < 2) return null;
+  let bestI = 0;
+  let bestJ = 1;
+  let bestDelta = deltaE76(palette[0], palette[1]);
+  for (let i = 0; i < palette.length; i += 1) {
+    for (let j = i + 1; j < palette.length; j += 1) {
+      if (i === 0 && j === 1) continue;
+      const delta = deltaE76(palette[i], palette[j]);
+      if (delta < bestDelta) {
+        bestDelta = delta;
+        bestI = i;
+        bestJ = j;
+      }
+    }
+  }
+  return { a: palette[bestI], b: palette[bestJ], i: bestI, j: bestJ, delta_e: bestDelta };
+}
+
+function jsonTokens(palette) {
+  const studio = {};
+  palette.forEach((color, index) => {
+    studio[String(index + 1)] = color;
+  });
+  return JSON.stringify({ ink: INK, studio });
+}
+
+function tailwindTheme(palette) {
+  const pairs = palette.map((color, index) => `${index + 1}: '${color}'`);
+  pairs.push(`ink: '${INK}'`);
+  return `theme: { extend: { colors: { studio: { ${pairs.join(", ")} } } } }`;
 }
 
 function bestOnInk(palette, ink = INK) {
@@ -173,6 +299,11 @@ function renderPalette(colors) {
     const ratioNode = card.querySelector("[data-swatch-ratio]");
     if (chip) chip.style.background = hex;
     if (hexNode) hexNode.textContent = hex;
+    const hslNode = card.querySelector("[data-swatch-hsl]");
+    if (hslNode) {
+      const hsl = hexToHsl(hex);
+      hslNode.textContent = `${hsl.h}° ${hsl.s}% ${hsl.l}%`;
+    }
     if (ratioNode) ratioNode.textContent = ratio.toFixed(2);
     setBadge(card.querySelector("[data-swatch-aa]"), passesAa(hex, INK), "AA pass", "AA fail");
     setBadge(card.querySelector("[data-swatch-aaa]"), passesAaa(hex, INK), "AAA pass", "AAA fail");
@@ -219,6 +350,40 @@ function renderScss(scss) {
   if (node) node.textContent = scss;
 }
 
+function renderJsonTokens(tokens) {
+  const node = document.querySelector("[data-json-tokens]");
+  if (node) node.textContent = tokens;
+}
+
+function renderTailwind(theme) {
+  const node = document.querySelector("[data-tailwind-theme]");
+  if (node) node.textContent = theme;
+}
+
+function renderClosestPair(pair) {
+  const root = document.querySelector("[data-closest-pair]");
+  if (!root) return;
+  if (!pair) {
+    root.hidden = true;
+    return;
+  }
+  root.hidden = false;
+  const aChip = root.querySelector("[data-closest-a-chip]");
+  const bChip = root.querySelector("[data-closest-b-chip]");
+  const aNode = root.querySelector("[data-closest-a]");
+  const bNode = root.querySelector("[data-closest-b]");
+  const deltaNode = root.querySelector("[data-closest-delta]");
+  const iNode = root.querySelector("[data-closest-i]");
+  const jNode = root.querySelector("[data-closest-j]");
+  if (aChip) aChip.style.background = pair.a;
+  if (bChip) bChip.style.background = pair.b;
+  if (aNode) aNode.textContent = pair.a;
+  if (bNode) bNode.textContent = pair.b;
+  if (deltaNode) deltaNode.textContent = pair.delta_e.toFixed(1);
+  if (iNode) iNode.textContent = String(pair.i);
+  if (jNode) jNode.textContent = String(pair.j);
+}
+
 function renderBestOnInk(best) {
   const root = document.querySelector("[data-best-on-ink]");
   if (!root || !best) return;
@@ -255,6 +420,43 @@ function renderBodyPair(pair) {
   setBadge(root.querySelector("[data-body-aaa]"), pair.aaa, "AAA pass", "AAA fail");
 }
 
+function swatchIndex(node, fallback) {
+  const value = Number.parseInt(node ? node.value : String(fallback), 10);
+  if (!Number.isFinite(value)) return fallback;
+  return clamp(value, 0, 4);
+}
+
+function renderMixOptions(colors) {
+  const selects = [document.querySelector("[data-mix-a]"), document.querySelector("[data-mix-b]")];
+  selects.forEach((select) => {
+    if (!select) return;
+    const current = select.value;
+    select.innerHTML = colors
+      .map((hex, index) => `<option value="${index}">${index} · ${hex}</option>`)
+      .join("");
+    select.value = current;
+  });
+}
+
+function renderMix(colors) {
+  const root = document.querySelector("[data-mix]");
+  if (!root || !colors.length) return;
+  const a = swatchIndex(root.querySelector("[data-mix-a]"), 0);
+  const b = swatchIndex(root.querySelector("[data-mix-b]"), 1);
+  const tNode = root.querySelector("[data-mix-t]");
+  const t = clamp(Number.parseFloat(tNode ? tNode.value : "0.5") || 0, 0, 1);
+  const hex = mixHex(colors[a], colors[b], t);
+  const ratio = contrastRatio(hex, INK);
+  const chip = root.querySelector("[data-mix-chip]");
+  const hexNode = root.querySelector("[data-mix-hex]");
+  const ratioNode = root.querySelector("[data-mix-ratio]");
+  const tLabel = root.querySelector("[data-mix-t-label]");
+  if (chip) chip.style.background = hex;
+  if (hexNode) hexNode.textContent = hex;
+  if (ratioNode) ratioNode.textContent = ratio.toFixed(2);
+  if (tLabel) tLabel.textContent = t.toFixed(2);
+}
+
 function renderTypeScale(sizes, name) {
   const heading = document.querySelector("[data-type-heading]");
   if (heading) heading.textContent = `${ratioLabel(name)} from 16px.`;
@@ -282,6 +484,11 @@ async function compose(seed, ratioName) {
   renderBodyPair(recommendBody(colors));
   renderCss(cssVariables(colors));
   renderScss(scssMap(colors));
+  renderJsonTokens(jsonTokens(colors));
+  renderTailwind(tailwindTheme(colors));
+  renderClosestPair(closestPair(colors));
+  renderMixOptions(colors);
+  renderMix(colors);
   renderTypeScale(typeScale(16, TYPE_RATIOS[ratioKey], 6), ratioKey);
 }
 
@@ -307,10 +514,55 @@ function bindCopyButton(button, source) {
 function initCopyButtons() {
   bindCopyButton(document.querySelector("[data-copy-css]"), document.querySelector("[data-css-variables]"));
   bindCopyButton(document.querySelector("[data-copy-scss]"), document.querySelector("[data-scss-map]"));
+  bindCopyButton(document.querySelector("[data-copy-json]"), document.querySelector("[data-json-tokens]"));
+  bindCopyButton(document.querySelector("[data-copy-tailwind]"), document.querySelector("[data-tailwind-theme]"));
+}
+
+function initCopyLabLink() {
+  const button = document.querySelector("[data-copy-lab-link]");
+  const input = document.querySelector("[data-lab-seed]");
+  const ratioSelect = document.querySelector("[data-lab-ratio]");
+  if (!button) return;
+  button.addEventListener("click", async () => {
+    const seed = (input?.value || "").trim() || "asteria";
+    const ratioName = resolveRatio(ratioSelect ? ratioSelect.value : "major-third");
+    const text = `${window.location.origin}${window.location.pathname}?${labQuery(seed, ratioName)}`;
+    try {
+      await navigator.clipboard.writeText(text);
+      button.textContent = "Copied";
+      window.setTimeout(() => {
+        button.textContent = "Copy lab link";
+      }, 1600);
+    } catch {
+      button.textContent = "Copy failed";
+      window.setTimeout(() => {
+        button.textContent = "Copy lab link";
+      }, 1600);
+    }
+  });
+}
+
+function colorsFromDom() {
+  return Array.from(document.querySelectorAll("[data-swatch-hex]"))
+    .map((node) => (node.textContent || "").trim())
+    .filter(Boolean);
+}
+
+function initMix() {
+  const root = document.querySelector("[data-mix]");
+  if (!root) return;
+  const update = () => {
+    const colors = colorsFromDom();
+    if (colors.length) renderMix(colors);
+  };
+  root.addEventListener("input", update);
+  root.addEventListener("change", update);
 }
 
 function initLab() {
   initCopyButtons();
+  initCopyLabLink();
+  initMix();
 
   const form = document.querySelector("[data-lab-form]");
   const input = document.querySelector("[data-lab-seed]");

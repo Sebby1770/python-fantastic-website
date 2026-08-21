@@ -12,14 +12,20 @@ from studio import (
     INK,
     TYPE_RATIOS,
     best_on_ink,
+    closest_pair,
     contrast_ratio,
     css_variables,
+    hex_to_hsl,
+    json_tokens,
+    lab_query,
+    mix_hex,
     palette_from_seed,
     pairing_table,
     passes_aa,
     passes_aaa,
     recommend_body,
     scss_map,
+    tailwind_theme,
     type_scale,
 )
 
@@ -70,6 +76,7 @@ class Swatch:
     aa_large: bool
     aaa: bool
     aaa_large: bool
+    hsl: dict[str, int]
 
 
 @dataclass(frozen=True)
@@ -262,6 +269,38 @@ def _ratio_label(name: str) -> str:
     return label[:1].upper() + label[1:]
 
 
+def _parse_lab_mix(raw: str | None) -> tuple[int, int, float] | None:
+    if raw is None:
+        return None
+    parts = [part.strip() for part in raw.split(",")]
+    if len(parts) not in {2, 3}:
+        return None
+    try:
+        first = int(parts[0])
+        second = int(parts[1])
+        amount = float(parts[2]) if len(parts) == 3 else 0.5
+    except ValueError:
+        return None
+    if first < 0 or first > 4 or second < 0 or second > 4:
+        return None
+    return first, second, amount
+
+
+def _mix_view(palette: list[str], first: int = 0, second: int = 1, amount: float = 0.5) -> dict:
+    mixed = mix_hex(palette[first], palette[second], amount)
+    ratio = contrast_ratio(mixed, INK)
+    t_clamped = 0.0 if amount < 0 else 1.0 if amount > 1 else float(amount)
+    return {
+        "a": first,
+        "b": second,
+        "t": t_clamped,
+        "hex": mixed,
+        "ratio": ratio,
+        "aa": passes_aa(mixed, INK),
+        "aaa": passes_aaa(mixed, INK),
+    }
+
+
 def _lab_swatches(seed: str) -> list[Swatch]:
     swatches: list[Swatch] = []
     for color in palette_from_seed(seed):
@@ -274,6 +313,7 @@ def _lab_swatches(seed: str) -> list[Swatch]:
                 aa_large=passes_aa(color, INK, large=True),
                 aaa=passes_aaa(color, INK, large=False),
                 aaa_large=passes_aaa(color, INK, large=True),
+                hsl=hex_to_hsl(color),
             )
         )
     return swatches
@@ -302,6 +342,8 @@ def create_app() -> Flask:
         seed = (request.args.get("seed") or "asteria").strip() or "asteria"
         ratio_name, ratio = _lab_ratio(request.args.get("ratio"))
         palette = palette_from_seed(seed)
+        parsed_mix = _parse_lab_mix(request.args.get("mix"))
+        mix = _mix_view(palette, *parsed_mix) if parsed_mix is not None else _mix_view(palette)
         return render_template(
             "lab.html",
             seed=seed,
@@ -314,24 +356,35 @@ def create_app() -> Flask:
             pairings=pairing_table(palette),
             css_vars=css_variables(palette),
             scss=scss_map(palette),
+            tokens=json_tokens(palette),
+            tailwind=tailwind_theme(palette),
             best=best_on_ink(palette),
             body_pair=recommend_body(palette),
+            closest=closest_pair(palette),
+            mix=mix,
         )
 
     @app.get("/lab.json")
     def lab_json():
         seed = (request.args.get("seed") or "asteria").strip() or "asteria"
+        ratio_name, _ratio = _lab_ratio(request.args.get("ratio"))
         palette = palette_from_seed(seed)
-        return jsonify(
-            {
-                "seed": seed,
-                "palette": palette,
-                "ink": INK,
-                "css": css_variables(palette),
-                "scss": scss_map(palette),
-                "best_on_ink": best_on_ink(palette),
-            }
-        )
+        payload = {
+            "seed": seed,
+            "palette": palette,
+            "ink": INK,
+            "css": css_variables(palette),
+            "scss": scss_map(palette),
+            "tokens": json_tokens(palette),
+            "tailwind": tailwind_theme(palette),
+            "best_on_ink": best_on_ink(palette),
+            "closest": closest_pair(palette),
+            "query": lab_query(seed, ratio_name),
+        }
+        parsed_mix = _parse_lab_mix(request.args.get("mix"))
+        if parsed_mix is not None:
+            payload["mix"] = _mix_view(palette, *parsed_mix)
+        return jsonify(payload)
 
     @app.get("/journal")
     def journal_index():

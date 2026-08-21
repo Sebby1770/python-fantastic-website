@@ -1,5 +1,30 @@
 # Changelog
 
+## [2.4.0] - 2026-08-21
+
+### Added
+
+- `hex_to_hsl`, `delta_e76`, `closest_pair`, `json_tokens`, and `tailwind_theme` in `studio.py`
+- Studio Lab HSL readout on each swatch, closest-pair CIE76 callout, and copyable JSON + Tailwind tokens
+- `GET /lab.json` includes `tokens`, `tailwind`, and `closest`
+
+### Changed
+
+- README and project metadata at 2.4.0
+
+## [2.3.0] - 2026-08-21
+
+### Added
+
+- `mix_hex`, `shade`, `tint`, and `lab_query` in `studio.py` (sRGB mix rounds like HSL, so black/white at 0.5 is `#808080`)
+- Studio Lab mix row (swatch indexes 0–4 and t) plus a “Copy lab link” control for `?seed=&ratio=`
+- `GET /lab.json` includes `query` from `lab_query`; `mix=a,b,t` is optional and not required
+- Frozen `docs/feed.xml` RSS 2.0 for the two journal posts, linked from the journal index
+
+### Changed
+
+- README and project metadata at 2.3.0
+
 ## [2.2.0] - 2026-08-21
 
 ### Added

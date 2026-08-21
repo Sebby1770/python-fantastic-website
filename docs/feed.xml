@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Asteria Studio Journal</title>
+    <link>https://sebby1770.github.io/python-fantastic-website/journal/</link>
+    <description>Notes from Asteria Studio on color, type, contrast, and the systems behind the work.</description>
+    <item>
+      <title>Ink, paper, and the seven-to-one line</title>
+      <link>https://sebby1770.github.io/python-fantastic-website/journal/ink-and-paper/</link>
+      <description>Why the studio measures every swatch against #101418, and why AAA is a different brief from AA.</description>
+    </item>
+    <item>
+      <title>A scale you can hear</title>
+      <link>https://sebby1770.github.io/python-fantastic-website/journal/a-scale-you-can-hear/</link>
+      <description>Major thirds, perfect fifths, and the reason a marketing site should feel tuned.</description>
+    </item>
+  </channel>
+</rss>

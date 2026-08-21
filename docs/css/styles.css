@@ -616,6 +616,78 @@ a.work-card:focus-visible {
   gap: 0.35rem 0.7rem;
 }
 
+.lab-mix {
+  margin-top: 1.6rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 1.2rem 1.25rem 1.3rem;
+  background: var(--white);
+  box-shadow: 0 16px 48px rgba(16, 20, 24, 0.08);
+}
+
+.lab-mix .section-heading {
+  margin-bottom: 0;
+}
+
+.lab-mix-controls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 1.15rem 0 1.2rem;
+}
+
+.lab-mix-controls label {
+  display: grid;
+  gap: 0.45rem;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.lab-mix-t {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.lab-mix-controls select {
+  width: 100%;
+  border: 1px solid rgba(16, 20, 24, 0.2);
+  border-radius: 8px;
+  padding: 0.85rem;
+  color: var(--ink);
+  background: #fbfcf8;
+  font: inherit;
+}
+
+.lab-mix-controls select:focus,
+.lab-mix-controls input[type="range"]:focus {
+  outline: 3px solid rgba(23, 124, 117, 0.22);
+  border-color: var(--teal);
+}
+
+.lab-mix-controls input[type="range"] {
+  width: 100%;
+  accent-color: var(--teal);
+}
+
+.lab-mix-result p,
+.lab-mix-result h3 {
+  margin: 0;
+}
+
+.lab-mix-result p {
+  color: var(--teal);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.lab-mix-result h3 {
+  margin: 0.2rem 0 0;
+  font-size: 1.05rem;
+}
+
 .lab-callouts {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -723,8 +795,21 @@ a.work-card:focus-visible {
 
 .token-exports {
   display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 2rem;
   margin: 0 0 4rem;
+}
+
+.closest-chips {
+  display: flex;
+  gap: 0.55rem;
+}
+
+.swatch-body p[data-swatch-hsl],
+.closest-index {
+  text-transform: none;
+  font-weight: 600;
+  color: var(--ink-soft);
 }
 
 .css-export {
@@ -960,8 +1045,10 @@ a.work-card:focus-visible {
   .service-row,
   .lab-layout,
   .lab-callouts,
+  .lab-mix-controls,
   .case-layout,
-  .css-export-header {
+  .css-export-header,
+  .token-exports {
     grid-template-columns: 1fr;
     gap: 1rem;
   }

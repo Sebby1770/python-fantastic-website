@@ -2,11 +2,18 @@ from pytest import approx
 
 from app import CONTACT_RATE_LIMIT, JOURNAL, create_app
 from studio import (
+    INK,
     TYPE_RATIOS,
     best_on_ink,
+    closest_pair,
+    contrast_ratio,
     css_variables,
+    json_tokens,
+    lab_query,
+    mix_hex,
     palette_from_seed,
     scss_map,
+    tailwind_theme,
     type_scale,
 )
 
@@ -128,7 +135,18 @@ def test_lab_renders_palette_and_type_scale():
     assert "SCSS map" in html
     assert "Foreground" in html
     assert "Copy" in html
+    assert "Copy lab link" in html
+    assert "data-mix" in html
+    assert "data-mix-a" in html
+    assert "data-mix-b" in html
+    assert "data-mix-t" in html
+    assert mix_hex(palette[0], palette[1], 0.5) in html
     assert "data-body-pair hidden" in html
+    assert "JSON tokens" in html
+    assert "Tailwind theme" in html
+    assert "Closest pair" in html
+    assert json_tokens(palette) in html
+    assert tailwind_theme(palette) in html
 
 
 def test_lab_json_returns_palette_tokens():
@@ -152,9 +170,55 @@ def test_lab_json_returns_palette_tokens():
     assert payload["best_on_ink"]["aa"] is best["aa"]
     assert payload["best_on_ink"]["aaa"] is best["aaa"]
     assert payload["best_on_ink"]["ratio"] == approx(best["ratio"])
-    assert set(payload) == {"seed", "palette", "ink", "css", "scss", "best_on_ink"}
+    assert payload["query"] == lab_query(seed)
+    assert payload["tokens"] == json_tokens(palette)
+    assert payload["tailwind"] == tailwind_theme(palette)
+    assert payload["closest"]["a"] == closest_pair(palette)["a"]
+    assert payload["closest"]["b"] == closest_pair(palette)["b"]
+    assert payload["closest"]["i"] == closest_pair(palette)["i"]
+    assert payload["closest"]["j"] == closest_pair(palette)["j"]
+    assert payload["closest"]["delta_e"] == approx(closest_pair(palette)["delta_e"])
+    assert set(payload) == {
+        "seed",
+        "palette",
+        "ink",
+        "css",
+        "scss",
+        "tokens",
+        "tailwind",
+        "best_on_ink",
+        "closest",
+        "query",
+    }
     assert defaulted.status_code == 200
     assert defaulted.get_json()["seed"] == "asteria"
+    assert defaulted.get_json()["query"] == lab_query("asteria")
+    assert "mix" not in defaulted.get_json()
+
+
+def test_lab_json_optional_mix_and_query():
+    app = create_app()
+    seed = "asteria"
+    palette = palette_from_seed(seed)
+    mixed = mix_hex(palette[0], palette[4], 0.5)
+
+    with app.test_client() as client:
+        response = client.get("/lab.json?seed=asteria&mix=0,4,0.5")
+        ratioed = client.get("/lab.json?seed=hello+world&ratio=perfect-fifth")
+        invalid = client.get("/lab.json?seed=asteria&mix=9,1,0.5")
+
+    payload = response.get_json()
+    assert response.status_code == 200
+    assert payload["query"] == lab_query(seed)
+    assert payload["mix"]["hex"] == mixed
+    assert payload["mix"]["a"] == 0
+    assert payload["mix"]["b"] == 4
+    assert payload["mix"]["t"] == 0.5
+    assert payload["mix"]["ratio"] == approx(contrast_ratio(mixed, INK))
+    assert payload["mix"]["aa"] is (contrast_ratio(mixed, INK) >= 4.5)
+    assert payload["mix"]["aaa"] is (contrast_ratio(mixed, INK) >= 7.0)
+    assert ratioed.get_json()["query"] == lab_query("hello world", "perfect-fifth")
+    assert "mix" not in invalid.get_json()
 
 
 def test_lab_seed_changes_palette():
@@ -203,6 +267,9 @@ def test_journal_index_and_posts_render():
     assert index.status_code == 200
     html = index.get_data(as_text=True)
     assert "Journal" in html
+    assert 'rel="alternate"' in html
+    assert 'type="application/rss+xml"' in html
+    assert "feed.xml" in html
     for post in JOURNAL:
         assert post.title in html
         assert f'href="/journal/{post.slug}"' in html

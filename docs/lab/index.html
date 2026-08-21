@@ -10,6 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../css/styles.css">
+    
   </head>
   <body>
     <header class="site-header">
@@ -47,9 +48,10 @@
           <p class="eyebrow">Studio Lab</p>
           <h1>Color and type, from a seed.</h1>
           <p class="hero-copy">
-            Hash a phrase into five studio colors, measure AA and AAA against ink
-            <span data-ink>#101418</span>, call out the best on ink, recommend a
-            body pair, export CSS and SCSS tokens, and read a modular scale from 16px.
+            Hash a phrase into five studio colors, mix two swatches, measure AA and AAA against ink
+            <span data-ink>#101418</span>, call out the closest CIE76 pair and the best on ink,
+            recommend a body pair, export CSS, SCSS, JSON, and Tailwind tokens, and read a modular
+            scale from 16px.
           </p>
         </div>
       </section>
@@ -76,6 +78,7 @@
               </select>
             </label>
             <button class="button button-primary" type="submit">Compose palette</button>
+            <button class="button button-paper" type="button" data-copy-lab-link>Copy lab link</button>
             <p class="form-status">SHA-256 of the seed. Same phrase, same five colors.</p>
           </form>
 
@@ -90,6 +93,7 @@
                   <div class="swatch-chip" data-swatch-chip style="background: #66381f"></div>
                   <div class="swatch-body">
                     <p data-swatch-hex>#66381f</p>
+                    <p data-swatch-hsl>21° 53% 26%</p>
                     <h3><span data-swatch-ratio>1.89</span>:1 vs ink</h3>
                     <div class="swatch-badges">
                       <span class="aa-fail" data-swatch-aa>
@@ -112,6 +116,7 @@
                   <div class="swatch-chip" data-swatch-chip style="background: #a76538"></div>
                   <div class="swatch-body">
                     <p data-swatch-hex>#a76538</p>
+                    <p data-swatch-hsl>24° 50% 44%</p>
                     <h3><span data-swatch-ratio>4.02</span>:1 vs ink</h3>
                     <div class="swatch-badges">
                       <span class="aa-fail" data-swatch-aa>
@@ -134,6 +139,7 @@
                   <div class="swatch-chip" data-swatch-chip style="background: #a9be5c"></div>
                   <div class="swatch-body">
                     <p data-swatch-hex>#a9be5c</p>
+                    <p data-swatch-hsl>73° 43% 55%</p>
                     <h3><span data-swatch-ratio>8.99</span>:1 vs ink</h3>
                     <div class="swatch-badges">
                       <span class="aa-pass" data-swatch-aa>
@@ -156,6 +162,7 @@
                   <div class="swatch-chip" data-swatch-chip style="background: #83d1db"></div>
                   <div class="swatch-body">
                     <p data-swatch-hex>#83d1db</p>
+                    <p data-swatch-hsl>187° 55% 69%</p>
                     <h3><span data-swatch-ratio>10.67</span>:1 vs ink</h3>
                     <div class="swatch-badges">
                       <span class="aa-pass" data-swatch-aa>
@@ -178,6 +185,7 @@
                   <div class="swatch-chip" data-swatch-chip style="background: #a4b0d9"></div>
                   <div class="swatch-body">
                     <p data-swatch-hex>#a4b0d9</p>
+                    <p data-swatch-hsl>226° 41% 75%</p>
                     <h3><span data-swatch-ratio>8.62</span>:1 vs ink</h3>
                     <div class="swatch-badges">
                       <span class="aa-pass" data-swatch-aa>
@@ -198,6 +206,56 @@
               
             </div>
 
+            <article class="lab-mix" data-mix>
+              <div class="section-heading">
+                <p class="eyebrow">Mix</p>
+                <h2>A color between two swatches.</h2>
+              </div>
+              <div class="lab-mix-controls">
+                <label>
+                  From
+                  <select data-mix-a>
+                    
+                      <option value="0" selected>0 · #66381f</option>
+                    
+                      <option value="1">1 · #a76538</option>
+                    
+                      <option value="2">2 · #a9be5c</option>
+                    
+                      <option value="3">3 · #83d1db</option>
+                    
+                      <option value="4">4 · #a4b0d9</option>
+                    
+                  </select>
+                </label>
+                <label>
+                  To
+                  <select data-mix-b>
+                    
+                      <option value="0">0 · #66381f</option>
+                    
+                      <option value="1" selected>1 · #a76538</option>
+                    
+                      <option value="2">2 · #a9be5c</option>
+                    
+                      <option value="3">3 · #83d1db</option>
+                    
+                      <option value="4">4 · #a4b0d9</option>
+                    
+                  </select>
+                </label>
+                <label>
+                  <span class="lab-mix-t">t <span data-mix-t-label>0.50</span></span>
+                  <input type="range" min="0" max="1" step="0.01" value="0.5" data-mix-t>
+                </label>
+              </div>
+              <div class="lab-mix-result">
+                <div class="lab-callout-swatch" data-mix-chip style="background: #874f2c"></div>
+                <p data-mix-hex>#874f2c</p>
+                <h3><span data-mix-ratio>2.81</span>:1 vs ink</h3>
+              </div>
+            </article>
+
             <div class="lab-callouts">
               <article class="lab-callout" data-best-on-ink>
                 <p class="eyebrow">Best on ink</p>
@@ -212,6 +270,20 @@
                     AAA pass
                   </span>
                 </div>
+              </article>
+              <article class="lab-callout" data-closest-pair>
+                <p class="eyebrow">Closest pair</p>
+                <div class="closest-chips">
+                  <div class="lab-callout-swatch" data-closest-a-chip style="background: #66381f"></div>
+                  <div class="lab-callout-swatch" data-closest-b-chip style="background: #a76538"></div>
+                </div>
+                <p>
+                  <span data-closest-a>#66381f</span>
+                  ·
+                  <span data-closest-b>#a76538</span>
+                </p>
+                <h3>ΔE <span data-closest-delta>24.2</span></h3>
+                <p class="closest-index">swatches <span data-closest-i>0</span> and <span data-closest-j>1</span></p>
               </article>
               <article class="lab-callout" data-body-pair hidden>
                 <p class="eyebrow">Body pair</p>
@@ -429,6 +501,28 @@
               <button class="button button-paper" type="button" data-copy-scss>Copy</button>
             </div>
             <pre data-scss-map>$studio: ("1": #66381f, "2": #a76538, "3": #a9be5c, "4": #83d1db, "5": #a4b0d9, "ink": #101418);</pre>
+          </div>
+
+          <div class="css-export" data-json-export>
+            <div class="css-export-header">
+              <div class="section-heading">
+                <p class="eyebrow">Tokens</p>
+                <h2>JSON tokens.</h2>
+              </div>
+              <button class="button button-paper" type="button" data-copy-json>Copy</button>
+            </div>
+            <pre data-json-tokens>{"ink":"#101418","studio":{"1":"#66381f","2":"#a76538","3":"#a9be5c","4":"#83d1db","5":"#a4b0d9"}}</pre>
+          </div>
+
+          <div class="css-export" data-tailwind-export>
+            <div class="css-export-header">
+              <div class="section-heading">
+                <p class="eyebrow">Tokens</p>
+                <h2>Tailwind theme.</h2>
+              </div>
+              <button class="button button-paper" type="button" data-copy-tailwind>Copy</button>
+            </div>
+            <pre data-tailwind-theme>theme: { extend: { colors: { studio: { 1: '#66381f', 2: '#a76538', 3: '#a9be5c', 4: '#83d1db', 5: '#a4b0d9', ink: '#101418' } } } }</pre>
           </div>
         </div>
 

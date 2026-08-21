@@ -60,6 +60,41 @@ def write_robots(dest: Path) -> None:
     )
 
 
+def xml_text(value: str) -> str:
+    return (
+        value.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+    )
+
+
+def write_feed(dest: Path) -> None:
+    items = []
+    for post in JOURNAL:
+        link = f"{PAGES_ORIGIN}/journal/{post.slug}/"
+        items.append(
+            "    <item>\n"
+            f"      <title>{xml_text(post.title)}</title>\n"
+            f"      <link>{xml_text(link)}</link>\n"
+            f"      <description>{xml_text(post.dek)}</description>\n"
+            "    </item>"
+        )
+    body = "\n".join(items)
+    xml = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<rss version="2.0">\n'
+        "  <channel>\n"
+        "    <title>Asteria Studio Journal</title>\n"
+        f"    <link>{PAGES_ORIGIN}/journal/</link>\n"
+        "    <description>Notes from Asteria Studio on color, type, contrast, and the systems behind the work.</description>\n"
+        f"{body}\n"
+        "  </channel>\n"
+        "</rss>\n"
+    )
+    (dest / "feed.xml").write_text(xml, encoding="utf-8")
+
+
 def freeze(dest: Path | None = None) -> Path:
     dest = (dest or DOCS).resolve()
     if dest == ROOT.resolve():
@@ -97,6 +132,7 @@ def freeze(dest: Path | None = None) -> Path:
 
     write_sitemap(dest)
     write_robots(dest)
+    write_feed(dest)
     return dest
 
 
