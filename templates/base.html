@@ -29,6 +29,7 @@
           <a class="nav-case" href="{{ url_for('work_detail', slug=item.slug) }}"{% if request.path == '/work/' + item.slug %} aria-current="page"{% endif %}>{{ item.name }}</a>
         {% endfor %}
         <a href="{{ url_for('lab') }}"{% if request.path == '/lab' %} aria-current="page"{% endif %}>Lab</a>
+        <a href="{{ url_for('journal_index') }}"{% if request.path.startswith('/journal') %} aria-current="page"{% endif %}>Journal</a>
         <a href="{{ url_for('index') }}#services">Services</a>
         <a href="{{ url_for('index') }}#process">Process</a>
         <a class="nav-action" href="{{ url_for('index') }}#contact">Start</a>
@@ -43,6 +44,7 @@
       <span>Asteria Studio</span>
       <nav class="footer-nav" aria-label="Footer">
         <a href="{{ url_for('lab') }}">Lab</a>
+        <a href="{{ url_for('journal_index') }}">Journal</a>
         {% for item in nav_work %}
           <a href="{{ url_for('work_detail', slug=item.slug) }}">{{ item.name }}</a>
         {% endfor %}

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}{{ post.title }} — Asteria Studio{% endblock %}
+{% block description %}{{ post.dek }}{% endblock %}
+
+{% block content %}
+      <section class="page-hero" aria-label="{{ post.title }}">
+        <div class="hero-content">
+          <p class="eyebrow">Journal · {{ post.date }}</p>
+          <h1>{{ post.title }}</h1>
+          <p class="hero-copy">{{ post.dek }}</p>
+        </div>
+      </section>
+
+      <section class="section journal-section">
+        <article class="journal-prose">
+          {% for paragraph in post.body %}
+            <p>{{ paragraph }}</p>
+          {% endfor %}
+        </article>
+      </section>
+
+      {% if others %}
+        <section class="section">
+          <div class="section-heading">
+            <p class="eyebrow">More from the journal</p>
+            <h2>Keep reading.</h2>
+          </div>
+          <div class="journal-list">
+            {% for entry in others %}
+              <a class="journal-card" href="{{ url_for('journal_detail', slug=entry.slug) }}">
+                <p>{{ entry.date }}</p>
+                <h3>{{ entry.title }}</h3>
+                <span>{{ entry.dek }}</span>
+              </a>
+            {% endfor %}
+          </div>
+        </section>
+      {% endif %}
+{% endblock %}

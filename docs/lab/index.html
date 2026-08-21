@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Compose a deterministic five-color palette from a seed, check WCAG contrast against ink, and preview a major-third type scale.">
+    <meta name="description" content="Compose a deterministic five-color palette from a seed, check WCAG AA and AAA contrast, export CSS variables, and preview a modular type scale.">
     <title>Studio Lab — Asteria Studio</title>
     <link rel="icon" href="../img/favicon.svg" type="image/svg+xml">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -33,6 +33,7 @@
           <a class="nav-case" href="../work/cobalt-room/">Cobalt Room</a>
         
         <a href="../lab/" aria-current="page">Lab</a>
+        <a href="../journal/">Journal</a>
         <a href="../index.html#services">Services</a>
         <a href="../index.html#process">Process</a>
         <a class="nav-action" href="../index.html#contact">Start</a>
@@ -46,8 +47,9 @@
           <p class="eyebrow">Studio Lab</p>
           <h1>Color and type, from a seed.</h1>
           <p class="hero-copy">
-            Hash a phrase into five studio colors, measure contrast against ink
-            <span data-ink>#101418</span>, and read a major-third scale from 16px.
+            Hash a phrase into five studio colors, measure AA and AAA against ink
+            <span data-ink>#101418</span>, pair neighbors, export CSS variables,
+            and read a modular scale from 16px.
           </p>
         </div>
       </section>
@@ -58,6 +60,20 @@
             <label>
               Seed
               <input name="seed" type="text" value="asteria" autocomplete="off" data-lab-seed>
+            </label>
+            <label>
+              Ratio
+              <select name="ratio" data-lab-ratio>
+                
+                  <option value="minor-third">minor third (1.2)</option>
+                
+                  <option value="major-third" selected>major third (1.25)</option>
+                
+                  <option value="perfect-fourth">perfect fourth (1.333)</option>
+                
+                  <option value="perfect-fifth">perfect fifth (1.5)</option>
+                
+              </select>
             </label>
             <button class="button button-primary" type="submit">Compose palette</button>
             <p class="form-status">SHA-256 of the seed. Same phrase, same five colors.</p>
@@ -75,12 +91,20 @@
                   <div class="swatch-body">
                     <p data-swatch-hex>#66381f</p>
                     <h3><span data-swatch-ratio>1.89</span>:1 vs ink</h3>
-                    <span class="aa-fail" data-swatch-aa>
-                      AA fail
-                    </span>
-                    <span class="aa-fail" data-swatch-aa-large>
-                      AA large fail
-                    </span>
+                    <div class="swatch-badges">
+                      <span class="aa-fail" data-swatch-aa>
+                        AA fail
+                      </span>
+                      <span class="aa-fail" data-swatch-aaa>
+                        AAA fail
+                      </span>
+                      <span class="aa-fail" data-swatch-aa-large>
+                        AA large fail
+                      </span>
+                      <span class="aa-fail" data-swatch-aaa-large>
+                        AAA large fail
+                      </span>
+                    </div>
                   </div>
                 </article>
               
@@ -89,12 +113,20 @@
                   <div class="swatch-body">
                     <p data-swatch-hex>#a76538</p>
                     <h3><span data-swatch-ratio>4.02</span>:1 vs ink</h3>
-                    <span class="aa-fail" data-swatch-aa>
-                      AA fail
-                    </span>
-                    <span class="aa-pass" data-swatch-aa-large>
-                      AA large pass
-                    </span>
+                    <div class="swatch-badges">
+                      <span class="aa-fail" data-swatch-aa>
+                        AA fail
+                      </span>
+                      <span class="aa-fail" data-swatch-aaa>
+                        AAA fail
+                      </span>
+                      <span class="aa-pass" data-swatch-aa-large>
+                        AA large pass
+                      </span>
+                      <span class="aa-fail" data-swatch-aaa-large>
+                        AAA large fail
+                      </span>
+                    </div>
                   </div>
                 </article>
               
@@ -103,12 +135,20 @@
                   <div class="swatch-body">
                     <p data-swatch-hex>#a9be5c</p>
                     <h3><span data-swatch-ratio>8.99</span>:1 vs ink</h3>
-                    <span class="aa-pass" data-swatch-aa>
-                      AA pass
-                    </span>
-                    <span class="aa-pass" data-swatch-aa-large>
-                      AA large pass
-                    </span>
+                    <div class="swatch-badges">
+                      <span class="aa-pass" data-swatch-aa>
+                        AA pass
+                      </span>
+                      <span class="aa-pass" data-swatch-aaa>
+                        AAA pass
+                      </span>
+                      <span class="aa-pass" data-swatch-aa-large>
+                        AA large pass
+                      </span>
+                      <span class="aa-pass" data-swatch-aaa-large>
+                        AAA large pass
+                      </span>
+                    </div>
                   </div>
                 </article>
               
@@ -117,12 +157,20 @@
                   <div class="swatch-body">
                     <p data-swatch-hex>#83d1db</p>
                     <h3><span data-swatch-ratio>10.67</span>:1 vs ink</h3>
-                    <span class="aa-pass" data-swatch-aa>
-                      AA pass
-                    </span>
-                    <span class="aa-pass" data-swatch-aa-large>
-                      AA large pass
-                    </span>
+                    <div class="swatch-badges">
+                      <span class="aa-pass" data-swatch-aa>
+                        AA pass
+                      </span>
+                      <span class="aa-pass" data-swatch-aaa>
+                        AAA pass
+                      </span>
+                      <span class="aa-pass" data-swatch-aa-large>
+                        AA large pass
+                      </span>
+                      <span class="aa-pass" data-swatch-aaa-large>
+                        AAA large pass
+                      </span>
+                    </div>
                   </div>
                 </article>
               
@@ -131,22 +179,208 @@
                   <div class="swatch-body">
                     <p data-swatch-hex>#a4b0d9</p>
                     <h3><span data-swatch-ratio>8.62</span>:1 vs ink</h3>
-                    <span class="aa-pass" data-swatch-aa>
-                      AA pass
-                    </span>
-                    <span class="aa-pass" data-swatch-aa-large>
-                      AA large pass
-                    </span>
+                    <div class="swatch-badges">
+                      <span class="aa-pass" data-swatch-aa>
+                        AA pass
+                      </span>
+                      <span class="aa-pass" data-swatch-aaa>
+                        AAA pass
+                      </span>
+                      <span class="aa-pass" data-swatch-aa-large>
+                        AA large pass
+                      </span>
+                      <span class="aa-pass" data-swatch-aaa-large>
+                        AAA large pass
+                      </span>
+                    </div>
                   </div>
                 </article>
               
             </div>
+
+            <div class="pairing-block">
+              <div class="section-heading">
+                <p class="eyebrow">Pairings</p>
+                <h2>Ink and neighbors.</h2>
+              </div>
+              <div class="pairing-wrap">
+                <table class="pairing-table" data-pairing-table>
+                  <thead>
+                    <tr>
+                      <th>Foreground</th>
+                      <th>Background</th>
+                      <th>Ratio</th>
+                      <th>AA</th>
+                      <th>AAA</th>
+                    </tr>
+                  </thead>
+                  <tbody data-pairing-body>
+                    
+                      <tr>
+                        <td><span class="pair-chip" style="background: #66381f"></span>#66381f</td>
+                        <td><span class="pair-chip" style="background: #101418"></span>#101418</td>
+                        <td>1.89:1</td>
+                        <td>
+                          <span class="aa-fail">
+                            Fail
+                          </span>
+                        </td>
+                        <td>
+                          <span class="aa-fail">
+                            Fail
+                          </span>
+                        </td>
+                      </tr>
+                    
+                      <tr>
+                        <td><span class="pair-chip" style="background: #a76538"></span>#a76538</td>
+                        <td><span class="pair-chip" style="background: #101418"></span>#101418</td>
+                        <td>4.02:1</td>
+                        <td>
+                          <span class="aa-fail">
+                            Fail
+                          </span>
+                        </td>
+                        <td>
+                          <span class="aa-fail">
+                            Fail
+                          </span>
+                        </td>
+                      </tr>
+                    
+                      <tr>
+                        <td><span class="pair-chip" style="background: #a9be5c"></span>#a9be5c</td>
+                        <td><span class="pair-chip" style="background: #101418"></span>#101418</td>
+                        <td>8.99:1</td>
+                        <td>
+                          <span class="aa-pass">
+                            Pass
+                          </span>
+                        </td>
+                        <td>
+                          <span class="aa-pass">
+                            Pass
+                          </span>
+                        </td>
+                      </tr>
+                    
+                      <tr>
+                        <td><span class="pair-chip" style="background: #83d1db"></span>#83d1db</td>
+                        <td><span class="pair-chip" style="background: #101418"></span>#101418</td>
+                        <td>10.67:1</td>
+                        <td>
+                          <span class="aa-pass">
+                            Pass
+                          </span>
+                        </td>
+                        <td>
+                          <span class="aa-pass">
+                            Pass
+                          </span>
+                        </td>
+                      </tr>
+                    
+                      <tr>
+                        <td><span class="pair-chip" style="background: #a4b0d9"></span>#a4b0d9</td>
+                        <td><span class="pair-chip" style="background: #101418"></span>#101418</td>
+                        <td>8.62:1</td>
+                        <td>
+                          <span class="aa-pass">
+                            Pass
+                          </span>
+                        </td>
+                        <td>
+                          <span class="aa-pass">
+                            Pass
+                          </span>
+                        </td>
+                      </tr>
+                    
+                      <tr>
+                        <td><span class="pair-chip" style="background: #66381f"></span>#66381f</td>
+                        <td><span class="pair-chip" style="background: #a76538"></span>#a76538</td>
+                        <td>2.12:1</td>
+                        <td>
+                          <span class="aa-fail">
+                            Fail
+                          </span>
+                        </td>
+                        <td>
+                          <span class="aa-fail">
+                            Fail
+                          </span>
+                        </td>
+                      </tr>
+                    
+                      <tr>
+                        <td><span class="pair-chip" style="background: #a76538"></span>#a76538</td>
+                        <td><span class="pair-chip" style="background: #a9be5c"></span>#a9be5c</td>
+                        <td>2.24:1</td>
+                        <td>
+                          <span class="aa-fail">
+                            Fail
+                          </span>
+                        </td>
+                        <td>
+                          <span class="aa-fail">
+                            Fail
+                          </span>
+                        </td>
+                      </tr>
+                    
+                      <tr>
+                        <td><span class="pair-chip" style="background: #a9be5c"></span>#a9be5c</td>
+                        <td><span class="pair-chip" style="background: #83d1db"></span>#83d1db</td>
+                        <td>1.19:1</td>
+                        <td>
+                          <span class="aa-fail">
+                            Fail
+                          </span>
+                        </td>
+                        <td>
+                          <span class="aa-fail">
+                            Fail
+                          </span>
+                        </td>
+                      </tr>
+                    
+                      <tr>
+                        <td><span class="pair-chip" style="background: #83d1db"></span>#83d1db</td>
+                        <td><span class="pair-chip" style="background: #a4b0d9"></span>#a4b0d9</td>
+                        <td>1.24:1</td>
+                        <td>
+                          <span class="aa-fail">
+                            Fail
+                          </span>
+                        </td>
+                        <td>
+                          <span class="aa-fail">
+                            Fail
+                          </span>
+                        </td>
+                      </tr>
+                    
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
+        </div>
+
+        <div class="css-export" data-css-export>
+          <div class="css-export-header">
+            <div class="section-heading">
+              <p class="eyebrow">Tokens</p>
+              <h2>CSS variables.</h2>
+            </div>
+            <button class="button button-paper" type="button" data-copy-css>Copy</button>
+          </div>
+          <pre data-css-variables>:root { --studio-1: #66381f; --studio-2: #a76538; --studio-3: #a9be5c; --studio-4: #83d1db; --studio-5: #a4b0d9; --studio-ink: #101418; }</pre>
         </div>
 
         <div class="section-heading type-heading">
           <p class="eyebrow">Type scale</p>
-          <h2>Major third from 16px.</h2>
+          <h2 data-type-heading>Major third from 16px.</h2>
         </div>
         <div class="type-scale" data-type-scale>
           
@@ -189,6 +423,7 @@
       <span>Asteria Studio</span>
       <nav class="footer-nav" aria-label="Footer">
         <a href="../lab/">Lab</a>
+        <a href="../journal/">Journal</a>
         
           <a href="../work/northline/">Northline</a>
         

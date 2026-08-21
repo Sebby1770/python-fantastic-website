@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.1.0] - 2026-08-21
+
+### Added
+
+- WCAG AAA checks (`passes_aaa`), CSS variable export, pairing table, and named type ratios in `studio.py`
+- Studio Lab ratio select (GET `ratio`, default major-third), AAA badges, pairing table, and copyable CSS tokens
+- Journal index at `/journal` with two notes, plus `/journal/<slug>` article pages
+- Frozen `docs/journal/` (index at depth 1, posts at depth 2)
+
+### Changed
+
+- Header navigation now includes Journal
+- README and project metadata at 2.1.0
+
 ## [2.0.0] - 2026-08-21
 
 ### Added

@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from app import WORK, create_app  # noqa: E402
+from app import JOURNAL, WORK, create_app  # noqa: E402
 
 DOCS = ROOT / "docs"
 STATIC = ROOT / "static"
@@ -18,6 +18,8 @@ STATIC = ROOT / "static"
 def rewrite_urls(html: str, depth: int) -> str:
     prefix = "../" * depth
     html = html.replace("/static/", prefix)
+    html = re.sub(r'\b(href|action)="/journal/([a-z0-9-]+)"', rf'\1="{prefix}journal/\2/"', html)
+    html = re.sub(r'\b(href|action)="/journal"', rf'\1="{prefix}journal/"', html)
     html = re.sub(r'\b(href|action)="/work/([a-z0-9-]+)"', rf'\1="{prefix}work/\2/"', html)
     html = re.sub(r'\b(href|action)="/lab"', rf'\1="{prefix}lab/"', html)
     html = html.replace('href="/#', f'href="{prefix}index.html#')
@@ -41,9 +43,15 @@ def freeze(dest: Path | None = None) -> Path:
     (dest / ".nojekyll").write_text("", encoding="utf-8")
     (dest / "lab.js").write_text((STATIC / "js" / "lab.js").read_text(encoding="utf-8"), encoding="utf-8")
 
-    pages = [("/", dest / "index.html", 0), ("/lab", dest / "lab" / "index.html", 1)]
+    pages = [
+        ("/", dest / "index.html", 0),
+        ("/lab", dest / "lab" / "index.html", 1),
+        ("/journal", dest / "journal" / "index.html", 1),
+    ]
     for item in WORK:
         pages.append((f"/work/{item.slug}", dest / "work" / item.slug / "index.html", 2))
+    for post in JOURNAL:
+        pages.append((f"/journal/{post.slug}", dest / "journal" / post.slug / "index.html", 2))
 
     app = create_app()
     with app.test_client() as client:

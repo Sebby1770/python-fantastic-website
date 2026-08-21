@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Journal — Asteria Studio{% endblock %}
+{% block description %}Notes from Asteria Studio on color, type, contrast, and the systems behind the work.{% endblock %}
+
+{% block content %}
+      <section class="page-hero" aria-label="Journal">
+        <div class="hero-content">
+          <p class="eyebrow">Journal</p>
+          <h1>Studio notes on paper.</h1>
+          <p class="hero-copy">
+            Short pieces on ink, contrast, and type—the same language as the lab, written for the work.
+          </p>
+        </div>
+      </section>
+
+      <section class="section journal-index">
+        <div class="section-heading">
+          <p class="eyebrow">Latest</p>
+          <h2>Two notes from the bench.</h2>
+        </div>
+        <div class="journal-list">
+          {% for post in posts %}
+            <a class="journal-card" href="{{ url_for('journal_detail', slug=post.slug) }}">
+              <p>{{ post.date }}</p>
+              <h3>{{ post.title }}</h3>
+              <span>{{ post.dek }}</span>
+            </a>
+          {% endfor %}
+        </div>
+      </section>
+{% endblock %}

@@ -8,7 +8,17 @@ from time import monotonic
 
 from flask import Flask, abort, jsonify, render_template, request
 
-from studio import INK, contrast_ratio, palette_from_seed, passes_aa, type_scale
+from studio import (
+    INK,
+    TYPE_RATIOS,
+    contrast_ratio,
+    css_variables,
+    palette_from_seed,
+    pairing_table,
+    passes_aa,
+    passes_aaa,
+    type_scale,
+)
 
 CONTACT_RATE_LIMIT = 8
 CONTACT_RATE_WINDOW = 600
@@ -55,6 +65,17 @@ class Swatch:
     ratio: float
     aa: bool
     aa_large: bool
+    aaa: bool
+    aaa_large: bool
+
+
+@dataclass(frozen=True)
+class JournalPost:
+    title: str
+    slug: str
+    date: str
+    dek: str
+    body: tuple[str, ...]
 
 
 class RateLimiter:
@@ -175,12 +196,67 @@ PROCESS = [
     ),
 ]
 
+JOURNAL = [
+    JournalPost(
+        "Ink, paper, and the seven-to-one line",
+        "ink-and-paper",
+        "2026-08-21",
+        "Why the studio measures every swatch against #101418, and why AAA is a different brief from AA.",
+        (
+            "The Asteria palette is paper, teal, sky, coral, and gold, held in place by ink. "
+            "#101418 is dark enough to carry headlines and quiet enough to sit under a photograph. "
+            "Every generated swatch is asked the same first question: can it speak against that ink?",
+            "AA is the floor we will not go below for body copy. It is 4.5:1 for normal text and 3:1 "
+            "for large type—enough for a caption, a chip, a label that still has to be read. "
+            "AAA is a stricter brief: 7:1 for normal text, 4.5:1 when the type is large. "
+            "The pairing table in Studio Lab now reports both, so a seed can be judged instead of guessed.",
+            "Consecutive pairs matter as much as the ink test. A five-color ramp can look tuned in isolation "
+            "and still fail when two neighbors are asked to sit on top of each other. "
+            "If the coral cannot hold a line of type on the gold, the system is not finished.",
+            "We export the result as CSS variables so the same tokens can move from the lab into a layout: "
+            "--studio-1 through --studio-5, plus --studio-ink. Same seed, same five colors, same ink.",
+        ),
+    ),
+    JournalPost(
+        "A scale you can hear",
+        "a-scale-you-can-hear",
+        "2026-08-14",
+        "Major thirds, perfect fifths, and the reason a marketing site should feel tuned.",
+        (
+            "Type is easier to trust when the sizes are related. A modular scale takes a base—16px here—"
+            "and multiplies it by the same ratio at each step. The default in Studio Lab is a major third, "
+            "1.25, which gives a ramp that can hold an eyebrow, a deck, a section title, and a display line "
+            "without inventing a new size for each block.",
+            "The other ratios in the lab are musical on purpose. A minor third (1.2) stays compact, useful "
+            "when the page is already dense. A perfect fourth (1.333) opens more air between steps. "
+            "A perfect fifth (1.5) is dramatic: fewer useful stops, but the large sizes feel like a poster.",
+            "The point is not to worship the math. It is to keep the paper, teal, sky, coral, and gold "
+            "from competing with type that was chosen at random. When the scale is consistent, the color "
+            "can be quieter, and the site reads as one system instead of a stack of decisions.",
+            "Pick a ratio, keep the seed, and the lab will show the sizes in place. The same numbers ship "
+            "in Python and in the static twin, so a frozen GitHub Pages build does not drift from Flask.",
+        ),
+    ),
+]
+
 
 def _client_ip() -> str:
     forwarded = request.headers.get("X-Forwarded-For", "")
     if forwarded:
         return forwarded.split(",")[0].strip() or (request.remote_addr or "unknown")
     return request.remote_addr or "unknown"
+
+
+def _lab_ratio(name: str | None) -> tuple[str, float]:
+    key = (name or "major-third").strip() or "major-third"
+    if key not in TYPE_RATIOS:
+        key = "major-third"
+    return key, TYPE_RATIOS[key]
+
+
+def _ratio_label(name: str) -> str:
+    label = name.replace("-", " ")
+    return label[:1].upper() + label[1:]
 
 
 def _lab_swatches(seed: str) -> list[Swatch]:
@@ -193,6 +269,8 @@ def _lab_swatches(seed: str) -> list[Swatch]:
                 ratio=ratio,
                 aa=passes_aa(color, INK, large=False),
                 aa_large=passes_aa(color, INK, large=True),
+                aaa=passes_aaa(color, INK, large=False),
+                aaa_large=passes_aaa(color, INK, large=True),
             )
         )
     return swatches
@@ -219,13 +297,32 @@ def create_app() -> Flask:
     @app.get("/lab")
     def lab():
         seed = (request.args.get("seed") or "asteria").strip() or "asteria"
+        ratio_name, ratio = _lab_ratio(request.args.get("ratio"))
+        palette = palette_from_seed(seed)
         return render_template(
             "lab.html",
             seed=seed,
             ink=INK,
             swatches=_lab_swatches(seed),
-            scale=type_scale(),
+            scale=type_scale(ratio=ratio),
+            ratio_name=ratio_name,
+            ratio_label=_ratio_label(ratio_name),
+            ratios=TYPE_RATIOS,
+            pairings=pairing_table(palette),
+            css_vars=css_variables(palette),
         )
+
+    @app.get("/journal")
+    def journal_index():
+        return render_template("journal_index.html", posts=JOURNAL)
+
+    @app.get("/journal/<slug>")
+    def journal_detail(slug: str):
+        post = next((entry for entry in JOURNAL if entry.slug == slug), None)
+        if post is None:
+            abort(404)
+        others = [entry for entry in JOURNAL if entry.slug != slug]
+        return render_template("journal.html", post=post, others=others)
 
     @app.get("/work/<slug>")
     def work_detail(slug: str):

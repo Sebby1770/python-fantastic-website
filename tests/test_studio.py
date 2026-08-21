@@ -1,6 +1,16 @@
 from pytest import approx, raises
 
-from studio import contrast_ratio, palette_from_seed, passes_aa, type_scale
+from studio import (
+    INK,
+    TYPE_RATIOS,
+    contrast_ratio,
+    css_variables,
+    palette_from_seed,
+    pairing_table,
+    passes_aa,
+    passes_aaa,
+    type_scale,
+)
 
 
 def test_palette_from_seed_is_deterministic_and_hex():
@@ -43,6 +53,53 @@ def test_passes_aa_thresholds():
     assert passes_aa("#888888", "#ffffff") is False
     assert passes_aa("#888888", "#ffffff", large=True) is True
     assert passes_aa("#999999", "#ffffff", large=True) is False
+
+
+def test_passes_aaa_thresholds():
+    assert passes_aaa("#ffffff", "#000000") is True
+    assert passes_aaa("#ffffff", "#000000", large=True) is True
+    assert passes_aaa("#888888", "#ffffff") is False
+    assert passes_aaa("#888888", "#ffffff", large=True) is False
+    assert passes_aaa("#595959", "#ffffff") is True
+    assert passes_aaa("#777777", "#ffffff", large=True) is False
+    assert passes_aaa("#767676", "#ffffff", large=True) is True
+    assert passes_aaa("#767676", "#ffffff") is False
+
+
+def test_css_variables_snapshot():
+    css = css_variables(palette_from_seed("asteria"))
+    assert css.splitlines()[0] == (
+        ":root { --studio-1: #66381f; --studio-2: #a76538; "
+        "--studio-3: #a9be5c; --studio-4: #83d1db; --studio-5: #a4b0d9; "
+        "--studio-ink: #101418; }"
+    )
+
+
+def test_pairing_table_ink_and_neighbors():
+    palette = palette_from_seed("asteria")
+    rows = pairing_table(palette)
+    assert len(rows) == 9
+    for row in rows:
+        assert set(row) == {"fg", "bg", "ratio", "aa", "aaa"}
+        assert row["ratio"] == approx(contrast_ratio(row["fg"], row["bg"]))
+        assert row["aa"] is passes_aa(row["fg"], row["bg"])
+        assert row["aaa"] is passes_aaa(row["fg"], row["bg"])
+    for index, color in enumerate(palette):
+        assert rows[index]["fg"] == color
+        assert rows[index]["bg"] == INK
+    for index in range(len(palette) - 1):
+        neighbor = rows[len(palette) + index]
+        assert neighbor["fg"] == palette[index]
+        assert neighbor["bg"] == palette[index + 1]
+
+
+def test_type_ratios():
+    assert TYPE_RATIOS == {
+        "minor-third": 1.2,
+        "major-third": 1.25,
+        "perfect-fourth": 1.333,
+        "perfect-fifth": 1.5,
+    }
 
 
 def test_type_scale_major_third():

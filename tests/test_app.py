@@ -1,5 +1,5 @@
-from app import CONTACT_RATE_LIMIT, create_app
-from studio import palette_from_seed
+from app import CONTACT_RATE_LIMIT, JOURNAL, create_app
+from studio import TYPE_RATIOS, css_variables, palette_from_seed, type_scale
 
 
 def test_homepage_renders_brand_and_sections():
@@ -14,6 +14,7 @@ def test_homepage_renders_brand_and_sections():
     assert "Selected work" in html
     assert "Start the conversation" in html
     assert 'href="/lab"' in html
+    assert 'href="/journal"' in html
     assert 'href="/work/northline"' in html
     assert 'href="/work/meridian"' in html
     assert 'href="/work/cobalt-room"' in html
@@ -107,6 +108,12 @@ def test_lab_renders_palette_and_type_scale():
         assert color in html
     assert "16px" in html
     assert "AA" in html
+    assert "AAA" in html
+    assert 'name="ratio"' in html
+    assert 'value="major-third"' in html
+    assert css_variables(palette).splitlines()[0] in html
+    assert "Foreground" in html
+    assert "Copy" in html
 
 
 def test_lab_seed_changes_palette():
@@ -123,6 +130,48 @@ def test_lab_seed_changes_palette():
     assert first_html != second_html
     assert palette_from_seed("northline")[0] in first_html
     assert palette_from_seed("meridian")[0] in second_html
+
+
+def test_lab_ratio_query_changes_type_scale():
+    app = create_app()
+    fifth = type_scale(ratio=TYPE_RATIOS["perfect-fifth"])
+
+    with app.test_client() as client:
+        response = client.get("/lab?ratio=perfect-fifth")
+        fallback = client.get("/lab?ratio=not-a-ratio")
+
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert 'value="perfect-fifth"' in html
+    assert "121.5px" in html
+    for size in fifth:
+        label = f"{int(size)}px" if size == int(size) else f"{size}px"
+        assert label in html
+    assert fallback.status_code == 200
+    assert "48.83px" in fallback.get_data(as_text=True)
+
+
+def test_journal_index_and_posts_render():
+    app = create_app()
+
+    with app.test_client() as client:
+        index = client.get("/journal")
+        missing = client.get("/journal/not-a-note")
+        posts = {post.slug: client.get(f"/journal/{post.slug}") for post in JOURNAL}
+
+    assert index.status_code == 200
+    html = index.get_data(as_text=True)
+    assert "Journal" in html
+    for post in JOURNAL:
+        assert post.title in html
+        assert f'href="/journal/{post.slug}"' in html
+        article = posts[post.slug]
+        assert article.status_code == 200
+        article_html = article.get_data(as_text=True)
+        assert post.title in article_html
+        assert post.dek in article_html
+        assert post.body[0] in article_html
+    assert missing.status_code == 404
 
 
 def test_work_case_studies_render():

@@ -1,9 +1,15 @@
-/* Mirrors studio.py: SHA-256 seed, HSL palette, WCAG contrast, modular type scale. */
+/* Mirrors studio.py: SHA-256 seed, HSL palette, WCAG contrast, pairings, CSS tokens, type scale. */
 
 const INK = "#101418";
 const HUE_OFFSETS = [0, 24, 48, 172, 208];
 const SATS = [0.58, 0.52, 0.46, 0.5, 0.42];
 const LIGHTS = [0.3, 0.42, 0.54, 0.66, 0.78];
+const TYPE_RATIOS = {
+  "minor-third": 1.2,
+  "major-third": 1.25,
+  "perfect-fourth": 1.333,
+  "perfect-fifth": 1.5,
+};
 
 function clamp(value, low, high) {
   if (value < low) return low;
@@ -79,6 +85,48 @@ function passesAa(hexA, hexB, large = false) {
   return contrastRatio(hexA, hexB) >= (large ? 3 : 4.5);
 }
 
+function passesAaa(hexA, hexB, large = false) {
+  return contrastRatio(hexA, hexB) >= (large ? 4.5 : 7);
+}
+
+function cssVariables(palette) {
+  const tokens = palette.map((color, index) => `--studio-${index + 1}: ${color};`);
+  tokens.push(`--studio-ink: ${INK};`);
+  return `:root { ${tokens.join(" ")} }`;
+}
+
+function pairingTable(palette, ink = INK) {
+  const row = (fg, bg) => {
+    const ratio = contrastRatio(fg, bg);
+    return { fg, bg, ratio, aa: passesAa(fg, bg), aaa: passesAaa(fg, bg) };
+  };
+  const rows = palette.map((color) => row(color, ink));
+  for (let index = 0; index < palette.length - 1; index += 1) {
+    rows.push(row(palette[index], palette[index + 1]));
+  }
+  return rows;
+}
+
+function typeScale(basePx = 16, ratio = 1.25, steps = 6) {
+  if (steps < 1) {
+    throw new Error("steps must be at least 1");
+  }
+  const sizes = [];
+  for (let index = 0; index < steps; index += 1) {
+    sizes.push(Math.round(basePx * ratio ** index * 100) / 100);
+  }
+  return sizes;
+}
+
+function ratioLabel(name) {
+  const text = name.replace(/-/g, " ");
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+function formatPx(size) {
+  return size === Math.floor(size) ? String(Math.floor(size)) : String(size);
+}
+
 async function sha256Bytes(text) {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
   return new Uint8Array(digest);
@@ -103,23 +151,100 @@ function renderPalette(colors) {
     if (hexNode) hexNode.textContent = hex;
     if (ratioNode) ratioNode.textContent = ratio.toFixed(2);
     setBadge(card.querySelector("[data-swatch-aa]"), passesAa(hex, INK), "AA pass", "AA fail");
+    setBadge(card.querySelector("[data-swatch-aaa]"), passesAaa(hex, INK), "AAA pass", "AAA fail");
     setBadge(
       card.querySelector("[data-swatch-aa-large]"),
       passesAa(hex, INK, true),
       "AA large pass",
       "AA large fail",
     );
+    setBadge(
+      card.querySelector("[data-swatch-aaa-large]"),
+      passesAaa(hex, INK, true),
+      "AAA large pass",
+      "AAA large fail",
+    );
   });
 }
 
-async function compose(seed) {
+function renderPairing(rows) {
+  const body = document.querySelector("[data-pairing-body]");
+  if (!body) return;
+  body.innerHTML = rows
+    .map((pair) => {
+      const aaClass = pair.aa ? "aa-pass" : "aa-fail";
+      const aaaClass = pair.aaa ? "aa-pass" : "aa-fail";
+      return `<tr>
+        <td><span class="pair-chip" style="background: ${pair.fg}"></span>${pair.fg}</td>
+        <td><span class="pair-chip" style="background: ${pair.bg}"></span>${pair.bg}</td>
+        <td>${pair.ratio.toFixed(2)}:1</td>
+        <td><span class="${aaClass}">${pair.aa ? "Pass" : "Fail"}</span></td>
+        <td><span class="${aaaClass}">${pair.aaa ? "Pass" : "Fail"}</span></td>
+      </tr>`;
+    })
+    .join("");
+}
+
+function renderCss(css) {
+  const node = document.querySelector("[data-css-variables]");
+  if (node) node.textContent = css;
+}
+
+function renderTypeScale(sizes, name) {
+  const heading = document.querySelector("[data-type-heading]");
+  if (heading) heading.textContent = `${ratioLabel(name)} from 16px.`;
+  const root = document.querySelector("[data-type-scale]");
+  if (!root) return;
+  root.innerHTML = sizes
+    .map(
+      (size) =>
+        `<div class="type-row"><span>${formatPx(size)}px</span><p style="font-size: ${size}px">Asteria Studio</p></div>`,
+    )
+    .join("");
+}
+
+function resolveRatio(name) {
+  return TYPE_RATIOS[name] ? name : "major-third";
+}
+
+async function compose(seed, ratioName) {
   const digest = await sha256Bytes(seed);
-  renderPalette(paletteFromDigest(digest));
+  const colors = paletteFromDigest(digest);
+  const ratioKey = resolveRatio(ratioName);
+  renderPalette(colors);
+  renderPairing(pairingTable(colors));
+  renderCss(cssVariables(colors));
+  renderTypeScale(typeScale(16, TYPE_RATIOS[ratioKey], 6), ratioKey);
+}
+
+function initCopyButton() {
+  const copyButton = document.querySelector("[data-copy-css]");
+  const cssNode = document.querySelector("[data-css-variables]");
+  if (!copyButton || !cssNode) return;
+
+  copyButton.addEventListener("click", async () => {
+    const text = cssNode.textContent || "";
+    try {
+      await navigator.clipboard.writeText(text);
+      copyButton.textContent = "Copied";
+      window.setTimeout(() => {
+        copyButton.textContent = "Copy";
+      }, 1600);
+    } catch {
+      copyButton.textContent = "Copy failed";
+      window.setTimeout(() => {
+        copyButton.textContent = "Copy";
+      }, 1600);
+    }
+  });
 }
 
 function initLab() {
+  initCopyButton();
+
   const form = document.querySelector("[data-lab-form]");
   const input = document.querySelector("[data-lab-seed]");
+  const ratioSelect = document.querySelector("[data-lab-ratio]");
   if (!form || !input || !window.crypto?.subtle) return;
 
   const params = new URLSearchParams(window.location.search);
@@ -127,23 +252,44 @@ function initLab() {
   if (fromUrl && !input.value) {
     input.value = fromUrl;
   }
+  const ratioFromUrl = params.get("ratio");
+  if (ratioSelect && ratioFromUrl && TYPE_RATIOS[ratioFromUrl]) {
+    ratioSelect.value = ratioFromUrl;
+  }
+
+  const currentRatio = () => resolveRatio(ratioSelect ? ratioSelect.value : "major-third");
 
   const run = () => {
     const seed = input.value.trim() || "asteria";
-    compose(seed);
+    compose(seed, currentRatio());
+  };
+
+  const syncUrl = (seed, ratioName) => {
+    const url = new URL(window.location.href);
+    url.searchParams.set("seed", seed);
+    url.searchParams.set("ratio", ratioName);
+    window.history.replaceState({}, "", url);
   };
 
   form.addEventListener("submit", (event) => {
     event.preventDefault();
     const seed = input.value.trim() || "asteria";
     input.value = seed;
-    const url = new URL(window.location.href);
-    url.searchParams.set("seed", seed);
-    window.history.replaceState({}, "", url);
-    compose(seed);
+    const ratioName = currentRatio();
+    if (ratioSelect) ratioSelect.value = ratioName;
+    syncUrl(seed, ratioName);
+    compose(seed, ratioName);
   });
 
   input.addEventListener("input", run);
+  if (ratioSelect) {
+    ratioSelect.addEventListener("change", () => {
+      const seed = input.value.trim() || "asteria";
+      const ratioName = currentRatio();
+      syncUrl(seed, ratioName);
+      compose(seed, ratioName);
+    });
+  }
   run();
 }
 

@@ -7,15 +7,26 @@ import math
 
 INK = "#101418"
 
+TYPE_RATIOS = {
+    "minor-third": 1.2,
+    "major-third": 1.25,
+    "perfect-fourth": 1.333,
+    "perfect-fifth": 1.5,
+}
+
 _HUE_OFFSETS = (0.0, 24.0, 48.0, 172.0, 208.0)
 _SATS = (0.58, 0.52, 0.46, 0.50, 0.42)
 _LIGHTS = (0.30, 0.42, 0.54, 0.66, 0.78)
 
 __all__ = [
     "INK",
+    "TYPE_RATIOS",
     "contrast_ratio",
+    "css_variables",
     "palette_from_seed",
+    "pairing_table",
     "passes_aa",
+    "passes_aaa",
     "type_scale",
 ]
 
@@ -92,6 +103,37 @@ def passes_aa(hex_a: str, hex_b: str, large: bool = False) -> bool:
     """Return True when the pair meets WCAG AA (4.5:1, or 3:1 for large text)."""
     threshold = 3.0 if large else 4.5
     return contrast_ratio(hex_a, hex_b) >= threshold
+
+
+def passes_aaa(hex_a: str, hex_b: str, large: bool = False) -> bool:
+    """Return True when the pair meets WCAG AAA (7:1, or 4.5:1 for large text)."""
+    threshold = 4.5 if large else 7.0
+    return contrast_ratio(hex_a, hex_b) >= threshold
+
+
+def css_variables(palette: list[str]) -> str:
+    """Return a :root block of --studio-N tokens plus --studio-ink."""
+    tokens = [f"--studio-{index}: {color};" for index, color in enumerate(palette, start=1)]
+    tokens.append(f"--studio-ink: {INK};")
+    return ":root { " + " ".join(tokens) + " }"
+
+
+def pairing_table(palette: list[str], ink: str = INK) -> list[dict]:
+    """Contrast rows for every swatch vs ink, then each consecutive pair."""
+
+    def row(fg: str, bg: str) -> dict:
+        ratio = contrast_ratio(fg, bg)
+        return {
+            "fg": fg,
+            "bg": bg,
+            "ratio": ratio,
+            "aa": passes_aa(fg, bg),
+            "aaa": passes_aaa(fg, bg),
+        }
+
+    rows = [row(color, ink) for color in palette]
+    rows.extend(row(palette[index], palette[index + 1]) for index in range(len(palette) - 1))
+    return rows
 
 
 def type_scale(base_px: float = 16, ratio: float = 1.25, steps: int = 6) -> list[float]:

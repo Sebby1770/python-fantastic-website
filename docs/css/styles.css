@@ -241,6 +241,18 @@ h3 {
   background: rgba(255, 255, 255, 0.18);
 }
 
+.button-paper {
+  color: var(--ink);
+  border-color: var(--line);
+  background: var(--white);
+}
+
+.button-paper:hover,
+.button-paper:focus-visible {
+  border-color: var(--teal);
+  background: var(--paper-deep);
+}
+
 .signal-strip {
   width: min(1120px, calc(100% - 10vw));
   display: grid;
@@ -448,7 +460,8 @@ a.work-card:focus-visible {
 }
 
 .contact-form input,
-.contact-form textarea {
+.contact-form textarea,
+.contact-form select {
   width: 100%;
   border: 1px solid rgba(16, 20, 24, 0.2);
   border-radius: 8px;
@@ -459,7 +472,8 @@ a.work-card:focus-visible {
 }
 
 .contact-form input:focus,
-.contact-form textarea:focus {
+.contact-form textarea:focus,
+.contact-form select:focus {
   outline: 3px solid rgba(23, 124, 117, 0.22);
   border-color: var(--teal);
 }
@@ -594,6 +608,144 @@ a.work-card:focus-visible {
   color: var(--coral);
   font-size: 0.82rem;
   font-weight: 800;
+}
+
+.swatch-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.7rem;
+}
+
+.pairing-block {
+  margin-top: 2.4rem;
+}
+
+.pairing-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--white);
+  box-shadow: 0 16px 48px rgba(16, 20, 24, 0.08);
+}
+
+.pairing-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.pairing-table th,
+.pairing-table td {
+  padding: 0.85rem 1rem;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.pairing-table th {
+  color: var(--teal);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--line);
+}
+
+.pairing-table td {
+  border-bottom: 1px solid var(--line);
+  font-weight: 700;
+}
+
+.pairing-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.pair-chip {
+  display: inline-block;
+  width: 0.75rem;
+  height: 0.75rem;
+  margin-right: 0.45rem;
+  border-radius: 2px;
+  vertical-align: middle;
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+.css-export {
+  margin: 0 0 4rem;
+}
+
+.css-export-header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.1rem;
+}
+
+.css-export-header .section-heading {
+  margin-bottom: 0;
+  flex: 1;
+}
+
+.css-export pre {
+  margin: 0;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 1.15rem 1.2rem;
+  color: var(--paper);
+  background: var(--ink);
+  font-size: 0.9rem;
+  line-height: 1.55;
+  box-shadow: 0 16px 48px rgba(16, 20, 24, 0.08);
+}
+
+.journal-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.journal-card {
+  display: grid;
+  gap: 0.45rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 1.3rem 1.35rem 1.4rem;
+  background: var(--white);
+  box-shadow: 0 16px 48px rgba(16, 20, 24, 0.08);
+}
+
+.journal-card:hover,
+.journal-card:focus-visible {
+  border-color: rgba(23, 124, 117, 0.45);
+  box-shadow: 0 22px 56px rgba(16, 20, 24, 0.14);
+}
+
+.journal-card p {
+  margin-bottom: 0;
+  color: var(--teal);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.journal-card h3 {
+  margin-bottom: 0.2rem;
+}
+
+.journal-card span {
+  color: var(--ink-soft);
+}
+
+.journal-prose {
+  max-width: 40rem;
+}
+
+.journal-prose p {
+  margin-bottom: 1.25rem;
+  color: var(--ink-soft);
+  font-size: 1.08rem;
+}
+
+.journal-prose p:last-child {
+  margin-bottom: 0;
 }
 
 .type-heading {
@@ -747,9 +899,14 @@ a.work-card:focus-visible {
   .contact-section,
   .service-row,
   .lab-layout,
-  .case-layout {
+  .case-layout,
+  .css-export-header {
     grid-template-columns: 1fr;
     gap: 1rem;
+  }
+
+  .css-export-header {
+    display: grid;
   }
 
   .work-grid,
